@@ -1,6 +1,0 @@
-{
-  "name": "EduMaster School Management System",
-  "description": "Multi-tenant School Management System with activation licensing gate, setup wizard, academic setup, subjects, classes, teachers, students, and super admin portal.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
