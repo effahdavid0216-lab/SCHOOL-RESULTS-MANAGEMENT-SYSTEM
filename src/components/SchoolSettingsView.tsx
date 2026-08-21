@@ -30,6 +30,7 @@ import {
   saveSchoolPermissions,
   logAuditAction
 } from '../lib/services';
+import { PageHeader, Badge, Button, Input, Card } from './ui';
 
 interface Props {
   schoolId: string;
@@ -215,84 +216,69 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl text-slate-200">
-      <div className="bg-[#0f111a] p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-light text-white serif italic flex items-center gap-2">
-            <Settings className="w-5 h-5 text-blue-400" />
-            School Profile & Branding Settings
-          </h2>
-          <p className="text-xs text-slate-400">
-            Configure school identity, logo, headmaster signature, and academic term preferences.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-4xl text-slate-800 dark:text-slate-200">
+      <PageHeader
+        title="School Profile & Branding Settings"
+        subtitle="Configure school identity, logo, headmaster signature, and academic term preferences."
+        badge={
+          savedSuccess ? (
+            <Badge variant="active" label="Settings Saved!" icon={<CheckCircle className="w-3.5 h-3.5" />} />
+          ) : undefined
+        }
+      />
 
-        {savedSuccess && (
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full animate-in fade-in uppercase tracking-wider">
-            <CheckCircle className="w-4 h-4" /> Settings Saved!
-          </span>
-        )}
-      </div>
-
-      <form onSubmit={handleSave} className="bg-[#0f111a] rounded-2xl border border-slate-800 p-6 sm:p-8 space-y-6 text-xs shadow-xl">
+      <form onSubmit={handleSave} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-6 text-xs shadow-xs">
         {/* Section 1: Branding */}
         <div>
-          <h3 className="text-sm font-light text-white serif italic mb-4 pb-2 border-b border-slate-800 flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-blue-400" /> School Identity & Branding
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> School Identity & Branding
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">School Name *</label>
-              <input
-                type="text"
+              <Input
+                label="School Name *"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Motto</label>
-              <input
-                type="text"
+              <Input
+                label="Motto"
                 value={motto}
                 onChange={(e) => setMotto(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Phone *</label>
-              <input
-                type="text"
+              <Input
+                label="Phone *"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Email *</label>
-              <input
+              <Input
+                label="Email *"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Official School Logo / Crest</label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-[#161925] border border-slate-700/80 rounded-2xl">
-                <div className="w-16 h-16 rounded-xl border-2 border-slate-700 overflow-hidden bg-slate-900 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl">
+                <div className="w-16 h-16 rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center shrink-0 shadow-inner">
                   {logoUrl ? (
                     <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-slate-600" />
+                    <ImageIcon className="w-6 h-6 text-slate-400" />
                   )}
                 </div>
 
@@ -305,76 +291,97 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
                       onChange={handleLogoFileChange}
                       className="hidden"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
+                      size="sm"
                       onClick={() => logoInputRef.current?.click()}
                       disabled={isUploadingLogo}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-md transition-colors"
+                      leftIcon={isUploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                     >
-                      {isUploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                       Upload School Crest / Logo
-                    </button>
+                    </Button>
                     {logoUrl && (
-                      <button
+                      <Button
                         type="button"
+                        variant="danger"
+                        size="sm"
                         onClick={() => setLogoUrl('')}
-                        className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                        leftIcon={<Trash2 className="w-3.5 h-3.5" />}
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Remove
-                      </button>
+                        Remove
+                      </Button>
                     )}
                   </div>
-                  <input
-                    type="text"
+                  <Input
                     placeholder="Or paste direct Image URL (e.g., https://...)"
                     value={logoUrl}
                     onChange={(e) => setLogoUrl(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-[#0f111a] border border-slate-700 rounded-lg text-slate-300 text-[11px] focus:border-blue-500 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
                     ⚡ Auto-compressed in browser under 50ms for instant saving. PNG/JPEG supported.
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div>
+              <Input
+                label="Street / Campus Address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="District / Municipality"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Region / State"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              />
             </div>
           </div>
         </div>
 
         {/* Section 2: Headmaster */}
         <div>
-          <h3 className="text-sm font-light text-white serif italic mb-4 pb-2 border-b border-slate-800 flex items-center gap-2">
-            <FileSignature className="w-4 h-4 text-blue-400" /> Headmaster / Principal Signature & Terminal Reports Stamp
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <FileSignature className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Headmaster / Principal Signature & Terminal Reports Stamp
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Headmaster Name</label>
-              <input
-                type="text"
+              <Input
+                label="Headmaster Name"
                 value={headmasterName}
                 onChange={(e) => setHeadmasterName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Headmaster Position Title</label>
-              <input
-                type="text"
+              <Input
+                label="Headmaster Position Title"
                 value={headmasterPosition}
                 onChange={(e) => setHeadmasterPosition(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Official Digital Signature</label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-[#161925] border border-slate-700/80 rounded-2xl">
-                <div className="w-32 h-16 rounded-xl border-2 border-slate-700 overflow-hidden bg-slate-900 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl">
+                <div className="w-32 h-16 rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center shrink-0 shadow-inner">
                   {headmasterSignatureUrl ? (
                     <img src={headmasterSignatureUrl} alt="Signature" className="w-full h-full object-contain p-1" />
                   ) : (
-                    <FileSignature className="w-6 h-6 text-slate-600" />
+                    <FileSignature className="w-6 h-6 text-slate-400" />
                   )}
                 </div>
 
@@ -387,33 +394,34 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
                       onChange={handleSignatureFileChange}
                       className="hidden"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
+                      size="sm"
                       onClick={() => signatureInputRef.current?.click()}
                       disabled={isUploadingSignature}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-md transition-colors"
+                      leftIcon={isUploadingSignature ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                     >
-                      {isUploadingSignature ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                       Upload Headmaster Signature
-                    </button>
+                    </Button>
                     {headmasterSignatureUrl && (
-                      <button
+                      <Button
                         type="button"
+                        variant="danger"
+                        size="sm"
                         onClick={() => setHeadmasterSignatureUrl('')}
-                        className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                        leftIcon={<Trash2 className="w-3.5 h-3.5" />}
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Remove
-                      </button>
+                        Remove
+                      </Button>
                     )}
                   </div>
-                  <input
-                    type="text"
+                  <Input
                     placeholder="Or paste Signature Image URL"
                     value={headmasterSignatureUrl}
                     onChange={(e) => setHeadmasterSignatureUrl(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-[#0f111a] border border-slate-700 rounded-lg text-slate-300 text-[11px] focus:border-blue-500 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
                     ⚡ This signature is stamped on all Student Terminal Report Cards and Certificates.
                   </p>
                 </div>
@@ -424,10 +432,10 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
 
         {/* Section 3: Granular Role & Permission Management */}
         <div>
-          <h3 className="text-sm font-light text-white serif italic mb-3 pb-2 border-b border-slate-800 flex items-center gap-2">
-            <Lock className="w-4 h-4 text-purple-400" /> Granular Role & Access Control Rights
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <Lock className="w-4 h-4 text-purple-500" /> Granular Role & Access Control Rights
           </h3>
-          <p className="text-xs text-slate-400 mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             Configure system access rights for staff roles. Check/uncheck permissions to control what each user role can view or modify.
           </p>
 
@@ -440,8 +448,8 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
                 onClick={() => setSelectedRole(r)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   selectedRole === r
-                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20'
-                    : 'bg-[#161925] text-slate-400 hover:text-white border border-slate-800'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700'
                 }`}
               >
                 {r.replace('_', ' ')}
@@ -450,7 +458,7 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
           </div>
 
           {/* Permissions Matrix */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-[#161925] p-4 rounded-xl border border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
             {AVAILABLE_PERMISSIONS.map(perm => {
               const rolePerms = permissions[selectedRole] || [];
               const isChecked = rolePerms.includes(perm.key);
@@ -461,14 +469,14 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
                   onClick={() => togglePermission(perm.key)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
                     isChecked
-                      ? 'bg-purple-500/10 border-purple-500/40 text-white'
-                      : 'bg-[#0f111a] border-slate-800/80 text-slate-400 hover:border-slate-700'
+                      ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/80 text-purple-900 dark:text-purple-200'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="space-y-0.5">
                     <span className="text-xs font-semibold block">{perm.label}</span>
                     <span className="text-[10px] text-slate-500 font-mono">
-                      Code: <code className="text-purple-300">{perm.key}</code> • {perm.category}
+                      Code: <code className="text-purple-600 dark:text-purple-300">{perm.key}</code> • {perm.category}
                     </span>
                   </div>
 
@@ -476,7 +484,7 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
                     className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
                       isChecked
                         ? 'bg-purple-600 border-purple-500 text-white'
-                        : 'border-slate-700 bg-slate-900'
+                        : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'
                     }`}
                   >
                     {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
@@ -487,43 +495,45 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
           </div>
         </div>
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="lg"
           disabled={saving}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer text-xs tracking-wider uppercase"
+          isLoading={saving}
+          leftIcon={<Save className="w-4 h-4" />}
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save All Changes
-        </button>
+        </Button>
 
       </form>
 
       {/* Section 4: Google Workspace API Services */}
-      <div className="pt-6 border-t border-slate-200">
+      <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
         <WorkspaceIntegrationPanel schoolId={schoolId} />
       </div>
 
       {/* Section 5: Developer Support & Super Admin Contact Panel */}
-      <div className="bg-[#0f111a] border border-slate-800 rounded-2xl p-6 space-y-4 text-slate-200">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-blue-400" /> Developer SaaS Support & Licensing Contact
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 text-slate-800 dark:text-slate-200 shadow-xs">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Developer SaaS Support & Licensing Contact
         </h3>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           For license renewals, extra student capacity, custom feature requests, or technical assistance, contact the Developer / Super Admin:
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs bg-[#161925] p-4 rounded-xl border border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
           <div>
             <span className="text-[10px] uppercase text-slate-500 font-bold block">Support Phone Lines</span>
-            <span className="font-mono text-white">0592005260 / 0540712524</span>
+            <span className="font-mono text-slate-900 dark:text-white font-semibold">0592005260 / 0540712524</span>
           </div>
           <div>
             <span className="text-[10px] uppercase text-slate-500 font-bold block">Developer Email</span>
-            <span className="font-mono text-blue-400">effahdavid45@gmail.com</span>
+            <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">effahdavid45@gmail.com</span>
           </div>
           <div>
             <span className="text-[10px] uppercase text-slate-500 font-bold block">WhatsApp Support</span>
-            <span className="font-mono text-emerald-400">0592005260</span>
+            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">0592005260</span>
           </div>
         </div>
 
@@ -535,7 +545,7 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
               href="https://www.facebook.com/share/1CK2w7tBZT/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 hover:border-blue-600 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2 cursor-pointer font-semibold"
+              className="px-3 py-2 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-600 text-blue-600 dark:text-blue-400 hover:text-white border border-blue-200 dark:border-blue-800 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2 cursor-pointer font-semibold"
             >
               <Facebook className="w-4 h-4" />
               <span>Facebook</span>
@@ -546,7 +556,7 @@ export const SchoolSettingsView: React.FC<Props> = ({ schoolId }) => {
               href="https://www.tiktok.com/@kindav44?_r=1&_t=ZS-98kantth0Eu"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-900 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2 cursor-pointer font-semibold"
+              className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-900 text-slate-800 dark:text-slate-200 hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl transition-all duration-200 hover:scale-105 flex items-center gap-2 cursor-pointer font-semibold"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.98-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.82.56-1.34 1.51-1.4 2.5-.07.96.34 1.93 1.07 2.56.82.72 2.01.91 3.03.53.95-.33 1.68-1.14 1.92-2.11.14-.62.14-1.28.14-1.92V.02z"/>

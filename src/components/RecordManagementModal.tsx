@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  X,
   User,
   GraduationCap,
   BookOpen,
@@ -17,14 +16,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  RefreshCw,
-  Award,
-  Clock,
-  Home,
-  MapPin,
   HeartHandshake,
   Users,
-  Key
+  Key,
+  X,
+  MapPin,
+  Clock
 } from 'lucide-react';
 import { Teacher, Student, ClassItem, SubjectItem, SchoolType } from '../types';
 import {
@@ -39,6 +36,15 @@ import {
   deleteStudent
 } from '../lib/services';
 import { uploadToSupabaseStorage } from '../lib/supabaseService';
+import {
+  Button,
+  IconButton,
+  Input,
+  Select,
+  FormField,
+  Badge,
+  Modal
+} from './ui';
 
 export type RecordEntityType = 'TEACHER' | 'STUDENT';
 export type RecordModalMode = 'CREATE' | 'EDIT' | 'VIEW' | 'DELETE';
@@ -126,7 +132,7 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
   const [lastName, setLastName] = useState('');
   const [className, setClassName] = useState('');
   const [classId, setClassId] = useState('');
-  const [stream, setStream] = useState('');
+  const [stream, setStream] = useState('A');
   const [house, setHouse] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
   const [previousSchool, setPreviousSchool] = useState('');
@@ -149,63 +155,61 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
   // Populate or Reset Form whenever modal opens or record changes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
       resetForm();
-      return;
-    }
+      setActiveTab('BASIC');
+      setShowSignaturePad(false);
 
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    setActiveTab('BASIC');
-    setShowSignaturePad(false);
-
-    if (mode === 'CREATE') {
-      initNewRecord();
-    } else if (record) {
-      populateFromRecord(record);
+      if (record) {
+        populateRecord(record);
+      } else {
+        initNewRecord();
+      }
     }
-  }, [isOpen, mode, record, entityType]);
+  }, [isOpen, record, mode, entityType]);
 
   const initNewRecord = () => {
-    const rand = Math.floor(100 + Math.random() * 900);
-    const today = new Date().toISOString().split('T')[0];
+    const defaultDate = new Date().toISOString().split('T')[0];
+    const defaultClass = classes.length > 0 ? classes[0] : null;
 
     if (entityType === 'TEACHER') {
-      setStaffId(`TCH-${rand}`);
+      const randomStaffNum = Math.floor(100 + Math.random() * 900);
+      setStaffId(`TCH-${randomStaffNum}`);
       setFullName('');
       setGender('MALE');
-      setDateOfBirth('1992-05-15');
+      setDateOfBirth('1990-01-01');
       setPhone('');
       setEmail('');
-      setPassword('Teacher123!');
-      setQualification('B.Ed. (Basic Education)');
-      setDateEmployed(today);
+      setQualification('B.Ed. Basic Education');
+      setDateEmployed(defaultDate);
       setPeriodsCount(18);
       setIsClassTeacher(false);
       setClassTeacherOfId('');
-      setAssignedClassIds([]);
-      setSubjectsTaughtIds([]);
+      setAssignedClassIds(classes.length > 0 ? [classes[0].id] : []);
+      setSubjectsTaughtIds(subjects.length > 0 ? [subjects[0].id] : []);
+      setTeacherStatus('ACTIVE');
+      setPassword('Teacher123!');
       setPhotoUrl('');
       setSignatureUrl('');
-      setTeacherStatus('ACTIVE');
       setHometown('');
       setAddress('');
     } else {
-      setStudentId(`STU-2026-${rand}`);
-      setAdmissionNo(`ADM/2026/${rand}`);
+      const year = new Date().getFullYear();
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      setAdmissionNo(`ADM/${year}/${randomNum}`);
+      setStudentId(`STU-${year}-${randomNum}`);
       setFullName('');
       setFirstName('');
       setMiddleName('');
       setLastName('');
       setGender('MALE');
-      setDateOfBirth('2014-06-12');
-      setPassword('2014-06-12');
-      const defaultClass = classes[0];
-      setClassName(defaultClass?.className || 'BASIC 1');
-      setClassId(defaultClass?.id || '');
+      setDateOfBirth('2014-05-15');
+      setPassword('2014-05-15');
+      setClassName(defaultClass ? defaultClass.className : 'BASIC 1');
+      setClassId(defaultClass ? defaultClass.id : '');
       setStream('A');
-      setHouse('Blue House');
-      setAdmissionDate(today);
+      setHouse('');
+      setAdmissionDate(defaultDate);
       setPreviousSchool('');
       setPhotoUrl('');
       setSignatureUrl('');
@@ -224,26 +228,26 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
     }
   };
 
-  const populateFromRecord = (rec: Teacher | Student) => {
+  const populateRecord = (rec: Teacher | Student) => {
     if (entityType === 'TEACHER') {
       const t = rec as Teacher;
       setStaffId(t.staffId || '');
       setFullName(t.fullName || '');
       setGender(t.gender || 'MALE');
-      setDateOfBirth(t.dateOfBirth || '1990-05-15');
+      setDateOfBirth(t.dateOfBirth || '');
       setPhone(t.phone || '');
       setEmail(t.email || '');
-      setPassword(t.password || 'Teacher123!');
       setQualification(t.qualification || 'B.Ed.');
-      setDateEmployed(t.dateEmployed || '2026-01-01');
+      setDateEmployed(t.dateEmployed || '');
       setPeriodsCount(t.periodsCount || 18);
-      setIsClassTeacher(t.isClassTeacher || false);
+      setIsClassTeacher(Boolean(t.isClassTeacher));
       setClassTeacherOfId(t.classTeacherOfId || '');
-      setAssignedClassIds(t.assignedClassIds || (t.classAssignedId ? [t.classAssignedId] : []));
+      setAssignedClassIds(t.assignedClassIds || []);
       setSubjectsTaughtIds(t.subjectsTaughtIds || []);
+      setTeacherStatus(t.accountStatus || 'ACTIVE');
+      setPassword(t.password || 'Teacher123!');
       setPhotoUrl(t.photoUrl || '');
       setSignatureUrl(t.signatureUrl || '');
-      setTeacherStatus(t.accountStatus || 'ACTIVE');
       setHometown(t.hometown || '');
       setAddress(t.address || '');
     } else {
@@ -298,13 +302,10 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
     if (!file) return;
 
     setIsUploadingPhoto(true);
-    setPhotoUploadNote('Compressing passport photo via canvas...');
+    setPhotoUploadNote('Compressing photo...');
 
     try {
-      // 1. Client-side canvas compression (scales down to 300x360, <40KB)
       const compressedDataUrl = await compressPassportPhoto(file);
-
-      // 2. Upload to Supabase Storage
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
       const folder = entityType === 'TEACHER' ? 'teachers' : 'students';
       const storagePath = `schools/${schoolId}/${folder}/photos/${Date.now()}_${cleanFileName}`;
@@ -314,17 +315,17 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
       if (uploadRes.success && uploadRes.url) {
         setPhotoUrl(uploadRes.url);
-        setPhotoUploadNote('Photo compressed and saved to Supabase storage.');
+        setPhotoUploadNote('Photo saved to cloud storage.');
       } else {
         setPhotoUrl(compressedDataUrl);
-        setPhotoUploadNote('Photo compressed & attached (local storage).');
+        setPhotoUploadNote('Photo compressed & attached.');
       }
     } catch (err: any) {
-      console.warn('Photo upload exception, using compressed data URL:', err);
+      console.warn('Photo upload exception, fallback to compressed data URL:', err);
       try {
         const compressedDataUrl = await compressPassportPhoto(file);
         setPhotoUrl(compressedDataUrl);
-        setPhotoUploadNote('Photo compressed & attached (local storage).');
+        setPhotoUploadNote('Photo attached.');
       } catch {
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -357,17 +358,17 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
       if (uploadRes.success && uploadRes.url) {
         setSignatureUrl(uploadRes.url);
-        setSignatureUploadNote('Signature compressed and stored in Supabase.');
+        setSignatureUploadNote('Signature stored in cloud storage.');
       } else {
         setSignatureUrl(compressedDataUrl);
         setSignatureUploadNote('Signature compressed & saved.');
       }
     } catch (err: any) {
-      console.warn('Signature storage fallback to compressed data URL:', err);
+      console.warn('Signature storage fallback:', err);
       try {
         const compressedDataUrl = await compressSignatureFile(file);
         setSignatureUrl(compressedDataUrl);
-        setSignatureUploadNote('Signature compressed & saved.');
+        setSignatureUploadNote('Signature saved.');
       } catch (fallbackErr) {
         console.error('Signature read error:', fallbackErr);
       }
@@ -376,7 +377,6 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
     }
   };
 
-  // Interactive Signature Canvas Draw Pad
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -405,7 +405,7 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#2563eb';
+    ctx.strokeStyle = '#4f46e5';
     ctx.lineTo(clientX - rect.left, clientY - rect.top);
     ctx.stroke();
   };
@@ -428,7 +428,7 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
     const dataUrl = canvas.toDataURL('image/png');
     setSignatureUrl(dataUrl);
     setShowSignaturePad(false);
-    setSignatureUploadNote('Handwritten signature captured via pad.');
+    setSignatureUploadNote('Handwritten signature captured.');
   };
 
   // ==========================================
@@ -451,16 +451,25 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
         setActiveTab('BASIC');
         return;
       }
-    } else {
-      const computedFullName = fullName.trim() || `${firstName.trim()} ${lastName.trim()}`.trim();
-      if (!computedFullName) {
-        setErrorMessage('Student name (First & Last name) is required.');
+      if (!phone.trim()) {
+        setErrorMessage('Phone number is required.');
         setActiveTab('BASIC');
         return;
       }
+    } else {
       if (!admissionNo.trim()) {
         setErrorMessage('Admission Number is required.');
         setActiveTab('BASIC');
+        return;
+      }
+      if (!firstName.trim() && !fullName.trim()) {
+        setErrorMessage('Student name is required.');
+        setActiveTab('BASIC');
+        return;
+      }
+      if (!parentPhone.trim()) {
+        setErrorMessage('Parent / Guardian phone number is required.');
+        setActiveTab('ACADEMIC');
         return;
       }
     }
@@ -469,10 +478,15 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
     try {
       if (entityType === 'TEACHER') {
-        const assignedClass = classes.find(c => c.id === classTeacherOfId);
-        const subjectsTaughtNames = subjects
-          .filter(s => subjectsTaughtIds.includes(s.id))
-          .map(s => s.subjectName);
+        const assignedClassNames = classes
+          .filter((c) => assignedClassIds.includes(c.id))
+          .map((c) => c.className);
+
+        const assignedSubjectNames = (subjects || [])
+          .filter((s) => subjectsTaughtIds.includes(s.id))
+          .map((s) => s.subjectName);
+
+        const assignedClass = classes.find((c) => c.id === classTeacherOfId);
 
         const teacherPayload: Teacher = {
           id: (record as Teacher)?.id || `tch_${Date.now()}`,
@@ -482,20 +496,21 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
           gender,
           dateOfBirth,
           phone: phone.trim(),
-          email: email.trim(),
-          password: password.trim() || 'Teacher123!',
+          email: email.trim() || `${staffId.toLowerCase()}@school.edu.gh`,
           qualification: qualification.trim(),
-          dateEmployed,
+          dateEmployed: dateEmployed || new Date().toISOString().split('T')[0],
           periodsCount: Number(periodsCount) || 18,
           isClassTeacher,
-          classTeacherOfId: isClassTeacher ? classTeacherOfId : '',
-          classTeacherOfName: isClassTeacher ? (assignedClass?.className || '') : '',
+          classTeacherOfId: isClassTeacher ? classTeacherOfId : undefined,
+          classTeacherOfName: isClassTeacher && assignedClass ? assignedClass.className : undefined,
           assignedClassIds,
+          assignedClassNames,
           subjectsTaughtIds,
-          subjectsTaughtNames,
+          subjectsTaughtNames: assignedSubjectNames,
           photoUrl: photoUrl.trim(),
           signatureUrl: signatureUrl.trim(),
           accountStatus: teacherStatus,
+          password: password.trim() || 'Teacher123!',
           hometown: hometown.trim(),
           address: address.trim(),
           createdAt: (record as Teacher)?.createdAt || new Date().toISOString()
@@ -505,10 +520,11 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
         setSuccessMessage(`Teacher "${teacherPayload.fullName}" saved successfully.`);
         if (onSaveSuccess) await onSaveSuccess(teacherPayload);
       } else {
-        const targetClass = classes.find(c => c.id === classId || c.className === className);
+        const targetClass = classes.find((c) => c.id === classId || c.className === className);
         const derivedFirst = firstName.trim() || fullName.trim().split(' ')[0] || '';
         const derivedLast = lastName.trim() || fullName.trim().split(' ').slice(1).join(' ') || '';
-        const finalFullName = fullName.trim() || `${derivedFirst} ${middleName ? middleName.trim() + ' ' : ''}${derivedLast}`.trim();
+        const finalFullName =
+          fullName.trim() || `${derivedFirst} ${middleName ? middleName.trim() + ' ' : ''}${derivedLast}`.trim();
 
         const studentPayload: Student = {
           id: (record as Student)?.id || `stu_${Date.now()}`,
@@ -526,8 +542,8 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
           nationality: 'Ghanaian',
           academicYear: '2026/2027',
           schoolType: (targetClass?.schoolType as SchoolType) || 'PRIMARY',
-          classId: targetClass?.id || classId || 'class_1',
-          className: targetClass?.className || className || 'BASIC 1',
+          classId: targetClass?.id || classId || (classes[0]?.id ?? 'class_1'),
+          className: targetClass?.className || className || (classes[0]?.className ?? 'BASIC 1'),
           stream: stream.trim(),
           house: house.trim(),
           admissionDate: admissionDate || new Date().toISOString().split('T')[0],
@@ -554,10 +570,10 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
       setTimeout(() => {
         onClose();
-      }, 700);
+      }, 600);
     } catch (err: any) {
       console.error('Save error:', err);
-      setErrorMessage(err.message || 'Failed to save record. Please check connection and try again.');
+      setErrorMessage(err.message || 'Failed to save record. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -601,61 +617,60 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
     const name = record.fullName;
 
     return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-        <div className="bg-[#0f111a] border border-rose-900/50 rounded-3xl max-w-md w-full p-5 sm:p-7 shadow-2xl text-slate-200 space-y-5">
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Delete ${isTeacher ? 'Teacher Staff Record' : 'Student Enrollment'}`}
+        maxWidth="md"
+        footer={
+          <>
+            <Button variant="secondary" size="md" onClick={onClose} disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              isLoading={isProcessing}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              onClick={handleDeleteConfirm}
+            >
+              Confirm & Delete
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
               <Trash2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-white">
-                Delete {isTeacher ? 'Teacher Staff Record' : 'Student Enrollment'}
-              </h3>
-              <p className="text-xs text-slate-400">
-                Are you sure you want to permanently remove <strong className="text-white font-semibold">{name}</strong> (<span className="text-cyan-400 font-mono">{identifier}</span>) from school records?
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                Are you sure you want to permanently remove <strong className="text-slate-900 dark:text-white font-bold">{name}</strong> (
+                <span className="text-indigo-600 dark:text-indigo-400 font-mono">{identifier}</span>) from school records?
               </p>
             </div>
           </div>
 
-          <div className="p-3 bg-rose-950/25 border border-rose-900/40 rounded-2xl text-[11px] text-rose-300/90 leading-relaxed space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-rose-300">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              Permanent Action Warning
+          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-2xl text-xs text-rose-800 dark:text-rose-300 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-rose-900 dark:text-rose-200">
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              <span>Permanent Action Warning</span>
             </div>
-            <p>
+            <p className="leading-relaxed">
               {isTeacher
-                ? 'Deleting this teacher will detach linked class masterships, timetable slots, and continuous assessment score logs.'
+                ? 'Deleting this teacher will detach linked class master assignments, timetable slots, and continuous assessment score logs.'
                 : 'Deleting this student will permanently erase all terminal report cards, continuous assessment records, and fee payment ledgers.'}
             </p>
           </div>
 
           {errorMessage && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300">
               {errorMessage}
             </div>
           )}
-
-          <div className="flex items-center justify-end gap-2.5 pt-2">
-            <button
-              type="button"
-              disabled={isProcessing}
-              onClick={onClose}
-              className="px-4 py-2.5 bg-[#161925] border border-slate-700 hover:bg-slate-800 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer disabled:opacity-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isProcessing}
-              onClick={handleDeleteConfirm}
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-xs cursor-pointer shadow-lg shadow-rose-950/50 disabled:opacity-50 transition-colors flex items-center gap-2"
-            >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {isProcessing ? 'Deleting Record...' : 'Confirm & Delete'}
-            </button>
-          </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 
@@ -668,233 +683,189 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
     const stu = !isTeacher ? (record as Student) : null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div className="bg-[#0f111a] border border-slate-800 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl text-xs text-slate-300 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
-                {isTeacher ? <GraduationCap className="w-6 h-6" /> : <User className="w-6 h-6" />}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-white">{record.fullName}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    (isTeacher ? tch?.accountStatus : stu?.status) === 'ACTIVE'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  }`}>
-                    {isTeacher ? tch?.accountStatus : stu?.status}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 font-mono">
-                  {isTeacher ? `Staff ID: ${tch?.staffId}` : `Admission: ${stu?.admissionNo} | ID: ${stu?.studentId}`}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={record.fullName}
+        description={isTeacher ? `Staff ID: ${tch?.staffId}` : `Admission: ${stu?.admissionNo} • ID: ${stu?.studentId}`}
+        maxWidth="2xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={() => {
+                if (onChangeMode) onChangeMode('DELETE');
+              }}
             >
-              <X className="w-4 h-4" />
-            </button>
+              Delete Record
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                onClick={() => {
+                  if (onChangeMode) onChangeMode('EDIT');
+                }}
+              >
+                Edit Profile
+              </Button>
+              <Button variant="secondary" size="sm" onClick={onClose}>
+                Close
+              </Button>
+            </div>
           </div>
-
-          {/* Body Content */}
-          <div className="overflow-y-auto space-y-6 pr-1 flex-1">
-            {/* Top Identity & Photo Card */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-2xl bg-[#161925] border border-slate-800">
-              <div className="w-24 h-28 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                {record.photoUrl ? (
-                  <img src={record.photoUrl} alt={record.fullName} className="w-full h-full object-cover" />
+        }
+      >
+        <div className="space-y-6">
+          {/* Identity Card */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+            <div className="w-24 h-28 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+              {record.photoUrl ? (
+                <img src={record.photoUrl} alt={record.fullName} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-10 h-10 text-slate-400" />
+              )}
+            </div>
+            <div className="space-y-2 flex-1 w-full text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <Badge
+                  variant={(isTeacher ? tch?.accountStatus : stu?.status) === 'ACTIVE' ? 'active' : 'inactive'}
+                  label={isTeacher ? tch?.accountStatus : stu?.status}
+                />
+                <span className="text-xs text-slate-500 font-mono">
+                  {isTeacher ? tch?.staffId : stu?.admissionNo}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Gender</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{record.gender}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Date of Birth</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{record.dateOfBirth || 'N/A'}</span>
+                </div>
+                {isTeacher ? (
+                  <>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Qualification</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{tch?.qualification}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Date Employed</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{tch?.dateEmployed}</span>
+                    </div>
+                  </>
                 ) : (
-                  <User className="w-10 h-10 text-slate-600" />
+                  <>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Current Class</span>
+                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">{stu?.className}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Admission Date</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{stu?.admissionDate || 'N/A'}</span>
+                    </div>
+                  </>
                 )}
               </div>
-              <div className="space-y-2 flex-1 w-full text-center sm:text-left">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            </div>
+          </div>
+
+          {/* Teacher Specific Details */}
+          {isTeacher && tch && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  Teaching Responsibilities & Assignments
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Gender</span>
-                    <span className="font-semibold text-white">{record.gender}</span>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Class Teacher Assignment</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {tch.isClassTeacher ? `Form Master of ${tch.classTeacherOfName || 'Class'}` : 'Not a Class Teacher'}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold">Date of Birth</span>
-                    <span className="font-semibold text-white">{record.dateOfBirth || 'N/A'}</span>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Weekly Teaching Load</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{tch.periodsCount || 18} Periods / Week</span>
                   </div>
-                  {isTeacher ? (
-                    <>
-                      <div>
-                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Qualification</span>
-                        <span className="font-semibold text-white">{tch?.qualification}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Date Employed</span>
-                        <span className="font-semibold text-white">{tch?.dateEmployed}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Current Class</span>
-                        <span className="font-semibold text-blue-400">{stu?.className}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Admission Date</span>
-                        <span className="font-semibold text-white">{stu?.admissionDate || 'N/A'}</span>
-                      </div>
-                    </>
+                </div>
+
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold mb-1.5">Subjects Allocated</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tch.subjectsTaughtNames && tch.subjectsTaughtNames.length > 0 ? (
+                      tch.subjectsTaughtNames.map((sName, i) => (
+                        <Badge key={i} variant="submitted" label={sName} />
+                      ))
+                    ) : (
+                      <span className="text-slate-500 text-xs italic">No specific subjects assigned</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {tch.signatureUrl && (
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <PenTool className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      Teacher Digital Signature
+                    </h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Applied automatically to student report card remarks</p>
+                  </div>
+                  <div className="h-12 w-28 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1 flex items-center justify-center">
+                    <img src={tch.signatureUrl} alt="Signature" className="max-h-full max-w-full object-contain" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Student Specific Details */}
+          {!isTeacher && stu && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <HeartHandshake className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  Parent & Guardian Contact Information
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Parent Name</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{stu.parentName || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Relationship</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{stu.parentRelationship || 'Parent'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Primary Phone</span>
+                    <span className="font-semibold text-slate-900 dark:text-white font-mono">{stu.parentPhone || 'N/A'}</span>
+                  </div>
+                  {stu.parentEmail && (
+                    <div className="sm:col-span-2">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Parent Email</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{stu.parentEmail}</span>
+                    </div>
+                  )}
+                  {stu.parentAddress && (
+                    <div className="sm:col-span-3">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-bold">Residential Address</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{stu.parentAddress}</span>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
-
-            {/* Teacher Specific Details */}
-            {isTeacher && tch && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-[#161925] border border-slate-800 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-                    Teaching Responsibilities & Assignments
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-slate-500 block text-[10px] uppercase font-bold">Class Teacher Assignment</span>
-                      <span className="font-semibold text-white">
-                        {tch.isClassTeacher ? `Form Master of ${tch.classTeacherOfName || 'Class'}` : 'Not a Class Teacher'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px] uppercase font-bold">Weekly Teaching Load</span>
-                      <span className="font-semibold text-white">{tch.periodsCount || 18} Periods / Week</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold mb-1">Subjects Allocated</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {tch.subjectsTaughtNames && tch.subjectsTaughtNames.length > 0 ? (
-                        tch.subjectsTaughtNames.map((sName, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-[11px] font-medium">
-                            {sName}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-slate-500 text-xs italic">No specific subjects assigned</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Digital Signature Card */}
-                {tch.signatureUrl && (
-                  <div className="p-4 rounded-2xl bg-[#161925] border border-slate-800 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <PenTool className="w-3.5 h-3.5 text-emerald-400" />
-                        Teacher Digital Signature
-                      </h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Applied automatically to student report card remarks</p>
-                    </div>
-                    <div className="h-12 w-28 bg-white/5 border border-slate-700 rounded-xl p-1 flex items-center justify-center">
-                      <img src={tch.signatureUrl} alt="Signature" className="max-h-full max-w-full object-contain" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Student Specific Details: Parent & Emergency */}
-            {!isTeacher && stu && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-[#161925] border border-slate-800 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <HeartHandshake className="w-3.5 h-3.5 text-blue-400" />
-                    Parent / Guardian Contact Information
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="text-slate-500 block text-[10px] uppercase font-bold">Parent / Guardian Name</span>
-                      <span className="font-semibold text-white">{stu.parentName || 'N/A'} ({stu.parentRelationship || 'Parent'})</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px] uppercase font-bold">Parent Phone Number</span>
-                      <a href={`tel:${stu.parentPhone}`} className="font-semibold text-blue-400 hover:underline flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> {stu.parentPhone || 'N/A'}
-                      </a>
-                    </div>
-                    {stu.parentEmail && (
-                      <div>
-                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Email Address</span>
-                        <a href={`mailto:${stu.parentEmail}`} className="text-blue-400 hover:underline flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {stu.parentEmail}
-                        </a>
-                      </div>
-                    )}
-                    {stu.parentAddress && (
-                      <div>
-                        <span className="text-slate-500 block text-[10px] uppercase font-bold">Residential Address</span>
-                        <span className="text-slate-300">{stu.parentAddress}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#161925] border border-slate-800 space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-amber-400" />
-                    Emergency Contact & Portal Credentials
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="text-slate-500 block text-[10px] uppercase font-bold">Emergency Contact</span>
-                      <span className="font-semibold text-white">{stu.emergencyName || stu.parentName} ({stu.emergencyPhone || stu.parentPhone})</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px] uppercase font-bold">Student Portal Initial Passcode</span>
-                      <span className="font-mono text-emerald-400 font-bold bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-800/40">
-                        {stu.password || stu.dateOfBirth} (DOB)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Modal Footer Controls */}
-          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                if (onChangeMode) onChangeMode('DELETE');
-              }}
-              className="px-3.5 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete Record
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (onChangeMode) onChangeMode('EDIT');
-                }}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-md flex items-center gap-1.5 transition-colors"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                Edit Profile
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      </div>
+      </Modal>
     );
   }
 
@@ -902,45 +873,37 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
   // VIEW 3: CREATE / EDIT RECORD MODAL FORM
   // =========================================================================
   const isTeacher = entityType === 'TEACHER';
-  const modalTitle = mode === 'CREATE'
-    ? (isTeacher ? 'Register New Teacher' : 'Enroll New Student')
-    : (isTeacher ? `Edit Teacher: ${fullName || staffId}` : `Edit Student: ${fullName || admissionNo}`);
+  const modalTitle =
+    mode === 'CREATE'
+      ? isTeacher
+        ? 'Register New Teacher'
+        : 'Enroll New Student'
+      : isTeacher
+      ? `Edit Teacher: ${fullName || staffId}`
+      : `Edit Student: ${fullName || admissionNo}`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-[#0f111a] border border-slate-800 rounded-3xl max-w-3xl w-full p-4 sm:p-7 shadow-2xl text-xs text-slate-300 space-y-5 my-6 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
-              {isTeacher ? <GraduationCap className="w-5 h-5" /> : <User className="w-5 h-5" />}
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white">{modalTitle}</h3>
-              <p className="text-[11px] text-slate-400">
-                {isTeacher
-                  ? 'Manage staff credentials, teaching allocations, profile photo & signature.'
-                  : 'Enroll student, assign class stream, configure parent contact & portal login.'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Navigation Tabs for Form Sections */}
-        <div className="flex items-center gap-1.5 p-1 bg-[#161925] border border-slate-800 rounded-2xl shrink-0">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={modalTitle}
+      description={
+        isTeacher
+          ? 'Manage staff credentials, teaching allocations, profile photo & signature.'
+          : 'Enroll student, assign class stream, configure parent contact & portal login.'
+      }
+      maxWidth="3xl"
+    >
+      <div className="space-y-5">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
           <button
             type="button"
             onClick={() => setActiveTab('BASIC')}
             className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'BASIC'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <User className="w-3.5 h-3.5" />
@@ -951,8 +914,8 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
             onClick={() => setActiveTab('ACADEMIC')}
             className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'ACADEMIC'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             {isTeacher ? <BookOpen className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
@@ -963,251 +926,183 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
             onClick={() => setActiveTab('MEDIA_SECURITY')}
             className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'MEDIA_SECURITY'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            3. Photo & Credentials
+            3. Photo & Security
           </button>
         </div>
 
-        {/* Feedback Notices */}
+        {/* Notices */}
         {errorMessage && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
         {successMessage && (
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{successMessage}</span>
           </div>
         )}
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSave} className="overflow-y-auto space-y-4 pr-1 flex-1">
+        <form onSubmit={handleSave} className="space-y-4">
           {/* TAB 1: BASIC INFORMATION */}
           {activeTab === 'BASIC' && (
             <div className="space-y-4">
               {isTeacher ? (
-                // TEACHER BASIC INFO
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                        Staff ID / Employee Code *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={staffId}
-                        onChange={(e) => setStaffId(e.target.value)}
-                        placeholder="e.g. TCH-409"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Samuel Mensah"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Staff ID / Employee Code"
+                      required
+                      value={staffId}
+                      onChange={(e) => setStaffId(e.target.value)}
+                      placeholder="e.g. TCH-409"
+                    />
+                    <Input
+                      label="Full Name"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Samuel Mensah"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Gender</label>
-                      <select
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value as any)}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Date of Birth</label>
-                      <input
-                        type="date"
-                        value={dateOfBirth}
-                        onChange={(e) => setDateOfBirth(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Account Status</label>
-                      <select
-                        value={teacherStatus}
-                        onChange={(e) => setTeacherStatus(e.target.value as any)}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="ACTIVE">Active Staff</option>
-                        <option value="INACTIVE">Inactive / On Leave</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Select
+                      label="Gender"
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value as any)}
+                    >
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                    </Select>
+                    <Input
+                      label="Date of Birth"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                    />
+                    <Select
+                      label="Account Status"
+                      value={teacherStatus}
+                      onChange={(e) => setTeacherStatus(e.target.value as any)}
+                    >
+                      <option value="ACTIVE">Active Staff</option>
+                      <option value="INACTIVE">Inactive / On Leave</option>
+                    </Select>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Phone Number</label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="e.g. 0244123456"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Email Address</label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g. teacher@school.edu.gh"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Phone Number"
+                      required
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 0244123456"
+                    />
+                    <Input
+                      label="Email Address"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. teacher@school.edu.gh"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Qualification</label>
-                      <input
-                        type="text"
-                        value={qualification}
-                        onChange={(e) => setQualification(e.target.value)}
-                        placeholder="e.g. B.Ed. Basic Education, M.Sc."
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Date Employed</label>
-                      <input
-                        type="date"
-                        value={dateEmployed}
-                        onChange={(e) => setDateEmployed(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Qualification"
+                      value={qualification}
+                      onChange={(e) => setQualification(e.target.value)}
+                      placeholder="e.g. B.Ed. Basic Education, M.Sc."
+                    />
+                    <Input
+                      label="Date Employed"
+                      type="date"
+                      value={dateEmployed}
+                      onChange={(e) => setDateEmployed(e.target.value)}
+                    />
                   </div>
                 </>
               ) : (
-                // STUDENT BASIC INFO
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                        Admission Number * (Portal Username)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={admissionNo}
-                        onChange={(e) => setAdmissionNo(e.target.value)}
-                        placeholder="e.g. ADM/2026/001"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                        Student Index / ID
-                      </label>
-                      <input
-                        type="text"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        placeholder="e.g. STU-2026-402"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Admission Number (Portal Username)"
+                      required
+                      value={admissionNo}
+                      onChange={(e) => setAdmissionNo(e.target.value)}
+                      placeholder="e.g. ADM/2026/001"
+                    />
+                    <Input
+                      label="Student Index / ID"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      placeholder="e.g. STU-2026-402"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">First Name *</label>
-                      <input
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="e.g. Kofi"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Middle Name</label>
-                      <input
-                        type="text"
-                        value={middleName}
-                        onChange={(e) => setMiddleName(e.target.value)}
-                        placeholder="e.g. Kwame"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Last Name *</label>
-                      <input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="e.g. Owusu"
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Input
+                      label="First Name"
+                      required
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="e.g. Kofi"
+                    />
+                    <Input
+                      label="Middle Name"
+                      value={middleName}
+                      onChange={(e) => setMiddleName(e.target.value)}
+                      placeholder="e.g. Kwame"
+                    />
+                    <Input
+                      label="Last Name"
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="e.g. Owusu"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Gender</label>
-                      <select
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value as any)}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                        Date of Birth * (Default Password)
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={dateOfBirth}
-                        onChange={(e) => {
-                          setDateOfBirth(e.target.value);
-                          if (mode === 'CREATE') setPassword(e.target.value);
-                        }}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Enrollment Status</label>
-                      <select
-                        value={studentStatus}
-                        onChange={(e) => setStudentStatus(e.target.value as any)}
-                        className="w-full px-3.5 py-2.5 bg-[#161925] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="ACTIVE">Active Student</option>
-                        <option value="GRADUATED">Graduated</option>
-                        <option value="WITHDRAWN">Withdrawn</option>
-                        <option value="SUSPENDED">Suspended</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Select
+                      label="Gender"
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value as any)}
+                    >
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                    </Select>
+                    <Input
+                      label="Date of Birth (Default Password)"
+                      required
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => {
+                        setDateOfBirth(e.target.value);
+                        if (mode === 'CREATE') setPassword(e.target.value);
+                      }}
+                    />
+                    <Select
+                      label="Enrollment Status"
+                      value={studentStatus}
+                      onChange={(e) => setStudentStatus(e.target.value as any)}
+                    >
+                      <option value="ACTIVE">Active Student</option>
+                      <option value="GRADUATED">Graduated</option>
+                      <option value="WITHDRAWN">Withdrawn</option>
+                      <option value="SUSPENDED">Suspended</option>
+                    </Select>
                   </div>
                 </>
               )}
@@ -1218,49 +1113,45 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
           {activeTab === 'ACADEMIC' && (
             <div className="space-y-4">
               {isTeacher ? (
-                // TEACHER ACADEMIC ALLOCATIONS
                 <>
-                  <div className="p-4 bg-[#161925] border border-slate-800 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isClassTeacher}
-                          onChange={(e) => setIsClassTeacher(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded bg-[#0f111a] border-slate-700"
-                        />
-                        <span className="font-semibold text-white text-xs">Assign as Class Form Master / Class Teacher</span>
-                      </label>
-                    </div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isClassTeacher}
+                        onChange={(e) => setIsClassTeacher(e.target.checked)}
+                        className="w-4 h-4 text-indigo-600 rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500"
+                      />
+                      <span className="font-bold text-slate-900 dark:text-white text-xs">
+                        Assign as Class Form Master / Class Teacher
+                      </span>
+                    </label>
 
                     {isClassTeacher && (
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                          Select Class
-                        </label>
-                        <select
-                          value={classTeacherOfId}
-                          onChange={(e) => setClassTeacherOfId(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                        >
-                          <option value="">-- Choose Class --</option>
-                          {classes.map(c => (
-                            <option key={c.id} value={c.id}>{c.className}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <Select
+                        label="Select Class"
+                        value={classTeacherOfId}
+                        onChange={(e) => setClassTeacherOfId(e.target.value)}
+                      >
+                        <option value="">-- Choose Class --</option>
+                        {classes.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.className}
+                          </option>
+                        ))}
+                      </Select>
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                      Assigned Teaching Classes
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#161925] border border-slate-800 rounded-2xl max-h-36 overflow-y-auto">
-                      {classes.map(c => {
+                  <FormField label="Assigned Teaching Classes">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl max-h-36 overflow-y-auto">
+                      {classes.map((c) => {
                         const checked = assignedClassIds.includes(c.id);
                         return (
-                          <label key={c.id} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer p-1 rounded hover:bg-slate-800/50">
+                          <label
+                            key={c.id}
+                            className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer p-1 rounded-lg hover:bg-white dark:hover:bg-slate-800"
+                          >
                             <input
                               type="checkbox"
                               checked={checked}
@@ -1268,27 +1159,27 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
                                 if (e.target.checked) {
                                   setAssignedClassIds([...assignedClassIds, c.id]);
                                 } else {
-                                  setAssignedClassIds(assignedClassIds.filter(id => id !== c.id));
+                                  setAssignedClassIds(assignedClassIds.filter((id) => id !== c.id));
                                 }
                               }}
-                              className="w-3.5 h-3.5 rounded bg-[#0f111a] border-slate-700 text-blue-600"
+                              className="w-3.5 h-3.5 rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-indigo-600"
                             />
                             <span>{c.className}</span>
                           </label>
                         );
                       })}
                     </div>
-                  </div>
+                  </FormField>
 
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                      Subjects Taught
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#161925] border border-slate-800 rounded-2xl max-h-36 overflow-y-auto">
-                      {subjects.map(s => {
+                  <FormField label="Subjects Taught">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl max-h-36 overflow-y-auto">
+                      {(subjects || []).map((s) => {
                         const checked = subjectsTaughtIds.includes(s.id);
                         return (
-                          <label key={s.id} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer p-1 rounded hover:bg-slate-800/50">
+                          <label
+                            key={s.id}
+                            className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer p-1 rounded-lg hover:bg-white dark:hover:bg-slate-800"
+                          >
                             <input
                               type="checkbox"
                               checked={checked}
@@ -1296,111 +1187,100 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
                                 if (e.target.checked) {
                                   setSubjectsTaughtIds([...subjectsTaughtIds, s.id]);
                                 } else {
-                                  setSubjectsTaughtIds(subjectsTaughtIds.filter(id => id !== s.id));
+                                  setSubjectsTaughtIds(subjectsTaughtIds.filter((id) => id !== s.id));
                                 }
                               }}
-                              className="w-3.5 h-3.5 rounded bg-[#0f111a] border-slate-700 text-blue-600"
+                              className="w-3.5 h-3.5 rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-indigo-600"
                             />
                             <span>{s.subjectName}</span>
                           </label>
                         );
                       })}
                     </div>
-                  </div>
+                  </FormField>
                 </>
               ) : (
-                // STUDENT ACADEMIC & PARENT DETAILS
                 <>
-                  <div className="p-4 bg-[#161925] border border-slate-800 rounded-2xl space-y-3">
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                       Class Enrollment & Academic Details
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Class Assigned</label>
-                          <select
-                            value={className}
-                            onChange={(e) => {
-                              setClassName(e.target.value);
-                              const matched = classes.find(c => c.className === e.target.value);
-                              if (matched) setClassId(matched.id);
-                            }}
-                            className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                          >
-                            {classes.map(c => (
-                              <option key={c.id} value={c.className}>{c.className}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">House (Optional)</label>
-                        <input
-                          type="text"
-                          value={house}
-                          onChange={(e) => setHouse(e.target.value)}
-                          placeholder="e.g. Aggrey, Gbewaa"
-                          className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                        />
-                      </div>
+                      <Select
+                        label="Class Assigned"
+                        value={className}
+                        onChange={(e) => {
+                          setClassName(e.target.value);
+                          const matched = classes.find((c) => c.className === e.target.value);
+                          if (matched) setClassId(matched.id);
+                        }}
+                      >
+                        {classes.map((c) => (
+                          <option key={c.id} value={c.className}>
+                            {c.className}
+                          </option>
+                        ))}
+                      </Select>
+                      <Input
+                        label="Stream (e.g. A, B)"
+                        value={stream}
+                        onChange={(e) => setStream(e.target.value)}
+                        placeholder="A"
+                      />
+                      <Input
+                        label="House (Optional)"
+                        value={house}
+                        onChange={(e) => setHouse(e.target.value)}
+                        placeholder="e.g. Aggrey, Gbewaa"
+                      />
                     </div>
                   </div>
 
-                  <div className="p-4 bg-[#161925] border border-slate-800 rounded-2xl space-y-3">
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <HeartHandshake className="w-3.5 h-3.5 text-blue-400" />
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <HeartHandshake className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                       Parent / Guardian Information
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="sm:col-span-2">
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Parent Full Name</label>
-                        <input
-                          type="text"
+                        <Input
+                          label="Parent Full Name"
+                          required
                           value={parentName}
                           onChange={(e) => setParentName(e.target.value)}
                           placeholder="e.g. Beatrice Mensah"
-                          className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Relationship</label>
-                        <select
-                          value={parentRelationship}
-                          onChange={(e) => setParentRelationship(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                        >
-                          <option value="Mother">Mother</option>
-                          <option value="Father">Father</option>
-                          <option value="Guardian">Guardian</option>
-                          <option value="Uncle">Uncle</option>
-                          <option value="Aunt">Aunt</option>
-                        </select>
-                      </div>
+                      <Select
+                        label="Relationship"
+                        value={parentRelationship}
+                        onChange={(e) => setParentRelationship(e.target.value)}
+                      >
+                        <option value="Mother">Mother</option>
+                        <option value="Father">Father</option>
+                        <option value="Guardian">Guardian</option>
+                        <option value="Uncle">Uncle</option>
+                        <option value="Aunt">Aunt</option>
+                      </Select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Parent Phone Number *</label>
-                        <input
-                          type="tel"
-                          value={parentPhone}
-                          onChange={(e) => setParentPhone(e.target.value)}
-                          placeholder="e.g. 0244123456"
-                          className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Parent Email</label>
-                        <input
-                          type="email"
-                          value={parentEmail}
-                          onChange={(e) => setParentEmail(e.target.value)}
-                          placeholder="e.g. parent@gmail.com"
-                          className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
-                        />
-                      </div>
+                      <Input
+                        label="Parent Phone Number"
+                        required
+                        type="tel"
+                        value={parentPhone}
+                        onChange={(e) => setParentPhone(e.target.value)}
+                        placeholder="e.g. 0244123456"
+                      />
+                      <Input
+                        label="Parent Email"
+                        type="email"
+                        value={parentEmail}
+                        onChange={(e) => setParentEmail(e.target.value)}
+                        placeholder="e.g. parent@gmail.com"
+                      />
                     </div>
                   </div>
                 </>
@@ -1408,31 +1288,31 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: MEDIA (PROFILE PICTURE & DIGITAL SIGNATURE) & SECURITY */}
+          {/* TAB 3: MEDIA & SECURITY */}
           {activeTab === 'MEDIA_SECURITY' && (
             <div className="space-y-4">
-              {/* Profile Photo Upload */}
-              <div className="p-4 bg-[#161925] border border-slate-800 rounded-2xl space-y-3">
+              {/* Photo Upload */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-blue-400" />
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     Passport Photo / Profile Picture
                   </h4>
                   <span className="text-[10px] text-slate-400 font-mono">Canvas Compressed &lt;40KB</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-24 h-28 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center relative shrink-0">
+                  <div className="w-24 h-28 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center relative shrink-0">
                     {photoUrl ? (
                       <img src={photoUrl} alt="Passport Preview" className="w-full h-full object-cover" />
                     ) : (
-                      <User className="w-8 h-8 text-slate-600" />
+                      <User className="w-8 h-8 text-slate-400" />
                     )}
                     {photoUrl && (
                       <button
                         type="button"
                         onClick={() => setPhotoUrl('')}
-                        className="absolute top-1 right-1 p-1 bg-rose-600/80 hover:bg-rose-500 text-white rounded-md cursor-pointer"
+                        className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-md cursor-pointer hover:bg-rose-700 transition-colors"
                         title="Remove photo"
                       >
                         <X className="w-3 h-3" />
@@ -1442,15 +1322,16 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
                   <div className="flex-1 w-full space-y-2">
                     <div className="flex items-center gap-2">
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         disabled={isUploadingPhoto}
+                        leftIcon={<Upload className="w-3.5 h-3.5" />}
                         onClick={() => photoInputRef.current?.click()}
-                        className="px-3.5 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
                       >
-                        {isUploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                        Upload Image File
-                      </button>
+                        {isUploadingPhoto ? 'Processing...' : 'Upload Image'}
+                      </Button>
                       <input
                         ref={photoInputRef}
                         type="file"
@@ -1463,38 +1344,36 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
                         placeholder="Or paste photo URL..."
                         value={photoUrl}
                         onChange={(e) => setPhotoUrl(e.target.value)}
-                        className="flex-1 px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
+                        className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
-                    {photoUploadNote && (
-                      <p className="text-[11px] text-blue-400">{photoUploadNote}</p>
-                    )}
+                    {photoUploadNote && <p className="text-[11px] text-indigo-600 dark:text-indigo-400">{photoUploadNote}</p>}
                   </div>
                 </div>
               </div>
 
-              {/* Dynamic Digital Signature Field (Especially for Teachers / School Staff) */}
-              <div className="p-4 bg-[#161925] border border-slate-800 rounded-2xl space-y-3">
+              {/* Digital Signature */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <PenTool className="w-3.5 h-3.5 text-emerald-400" />
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <PenTool className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     Digital Signature Image & Pad
                   </h4>
-                  <span className="text-[10px] text-slate-400">Used for report cards & credentials</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">Used for report card remarks</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-32 h-16 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center relative shrink-0 p-1">
+                  <div className="w-32 h-16 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center relative shrink-0 p-1">
                     {signatureUrl ? (
                       <img src={signatureUrl} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
                     ) : (
-                      <span className="text-[10px] text-slate-500 italic">No signature</span>
+                      <span className="text-[10px] text-slate-400 italic">No signature</span>
                     )}
                     {signatureUrl && (
                       <button
                         type="button"
                         onClick={() => setSignatureUrl('')}
-                        className="absolute top-1 right-1 p-0.5 bg-rose-600/80 hover:bg-rose-500 text-white rounded cursor-pointer"
+                        className="absolute top-1 right-1 p-0.5 bg-rose-600 text-white rounded cursor-pointer hover:bg-rose-700 transition-colors"
                         title="Remove signature"
                       >
                         <X className="w-2.5 h-2.5" />
@@ -1504,23 +1383,25 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
 
                   <div className="flex-1 w-full space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         disabled={isUploadingSignature}
+                        leftIcon={<Upload className="w-3.5 h-3.5" />}
                         onClick={() => signatureInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
                       >
-                        {isUploadingSignature ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                        Upload Signature
-                      </button>
-                      <button
+                        {isUploadingSignature ? 'Uploading...' : 'Upload File'}
+                      </Button>
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
+                        leftIcon={<PenTool className="w-3.5 h-3.5" />}
                         onClick={() => setShowSignaturePad(!showSignaturePad)}
-                        className="px-3.5 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                       >
-                        <PenTool className="w-3.5 h-3.5" />
-                        {showSignaturePad ? 'Hide Pad' : 'Draw with Pad'}
-                      </button>
+                        {showSignaturePad ? 'Hide Pad' : 'Draw Pad'}
+                      </Button>
                       <input
                         ref={signatureInputRef}
                         type="file"
@@ -1533,24 +1414,23 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
                         placeholder="Or signature URL..."
                         value={signatureUrl}
                         onChange={(e) => setSignatureUrl(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none"
+                        className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                     {signatureUploadNote && (
-                      <p className="text-[11px] text-emerald-400">{signatureUploadNote}</p>
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400">{signatureUploadNote}</p>
                     )}
                   </div>
                 </div>
 
-                {/* Draw Canvas Pad Modal Container */}
                 {showSignaturePad && (
-                  <div className="p-3 bg-[#0f111a] border border-purple-900/40 rounded-2xl space-y-2">
-                    <div className="flex items-center justify-between text-[11px] text-purple-300">
-                      <span>Draw signature in the box below using mouse or touchscreen:</span>
+                  <div className="p-3 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                      <span>Draw signature in the box below:</span>
                       <button
                         type="button"
                         onClick={clearCanvasSignature}
-                        className="text-xs text-rose-400 hover:underline cursor-pointer"
+                        className="text-xs text-rose-600 dark:text-rose-400 hover:underline cursor-pointer font-semibold"
                       >
                         Clear Canvas
                       </button>
@@ -1566,98 +1446,84 @@ export const RecordManagementModal: React.FC<RecordManagementModalProps> = ({
                       onTouchStart={startDrawing}
                       onTouchMove={draw}
                       onTouchEnd={stopDrawing}
-                      className="w-full h-28 bg-white rounded-xl cursor-crosshair border border-slate-600 touch-none"
+                      className="w-full h-28 bg-slate-50 dark:bg-slate-950 rounded-xl cursor-crosshair border border-slate-300 dark:border-slate-700 touch-none"
                     />
                     <div className="flex justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowSignaturePad(false)}
-                        className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs cursor-pointer"
-                      >
+                      <Button type="button" variant="secondary" size="sm" onClick={() => setShowSignaturePad(false)}>
                         Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={saveCanvasSignature}
-                        className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg text-xs cursor-pointer shadow flex items-center gap-1"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Apply Pad Signature
-                      </button>
+                      </Button>
+                      <Button type="button" variant="primary" size="sm" onClick={saveCanvasSignature}>
+                        Apply Signature
+                      </Button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Portal Security / Login Password */}
-              <div className="p-4 bg-[#161925] border border-slate-800 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5 text-blue-400" />
+              {/* Password */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   Portal Authentication Password
                 </h4>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-                    {isTeacher ? 'Teacher Account Password' : 'Student Portal Password (Default is Date of Birth)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={isTeacher ? 'Teacher123!' : 'YYYY-MM-DD'}
-                    className="w-full px-3.5 py-2.5 bg-[#0f111a] border border-slate-700 rounded-xl text-xs text-white focus:border-blue-500 focus:outline-none font-mono"
-                  />
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    {isTeacher
+                <Input
+                  label={isTeacher ? 'Teacher Account Password' : 'Student Portal Password (Default is Date of Birth)'}
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={isTeacher ? 'Teacher123!' : 'YYYY-MM-DD'}
+                  helperText={
+                    isTeacher
                       ? 'Teacher signs in with their Staff ID or Email and this password.'
-                      : 'Students sign in with their Admission Number and this password.'}
-                  </p>
-                </div>
+                      : 'Students sign in with their Admission Number and this password.'
+                  }
+                />
               </div>
             </div>
           )}
 
           {/* Form Actions Footer */}
-          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 bg-[#161925] border border-slate-700 hover:bg-slate-800 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer transition-colors"
-            >
+          <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <Button type="button" variant="secondary" size="md" onClick={onClose}>
               Cancel
-            </button>
+            </Button>
             <div className="flex items-center gap-2">
               {activeTab !== 'BASIC' && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="md"
                   onClick={() => setActiveTab(activeTab === 'MEDIA_SECURITY' ? 'ACADEMIC' : 'BASIC')}
-                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer transition-colors"
                 >
                   Previous
-                </button>
+                </Button>
               )}
               {activeTab !== 'MEDIA_SECURITY' ? (
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  size="md"
                   onClick={() => setActiveTab(activeTab === 'BASIC' ? 'ACADEMIC' : 'MEDIA_SECURITY')}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs cursor-pointer shadow-md transition-colors"
                 >
                   Next Step
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   type="submit"
-                  disabled={isProcessing}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs cursor-pointer shadow-lg shadow-blue-900/40 disabled:opacity-50 transition-colors flex items-center gap-2"
+                  variant="primary"
+                  size="md"
+                  isLoading={isProcessing}
+                  leftIcon={<CheckCircle2 className="w-4 h-4" />}
                 >
-                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  {isProcessing ? 'Saving Record...' : mode === 'CREATE' ? 'Complete Registration' : 'Save Changes'}
-                </button>
+                  {mode === 'CREATE' ? 'Complete Registration' : 'Save Changes'}
+                </Button>
               )}
             </div>
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };
+
 export default RecordManagementModal;

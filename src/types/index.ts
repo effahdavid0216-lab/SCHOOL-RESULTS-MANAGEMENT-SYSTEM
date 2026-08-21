@@ -6,7 +6,7 @@ export type LicenseStatus = 'TRIAL' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | '
 
 export type SubscriptionPlan = 'BASIC' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE' | 'TRIAL';
 
-export type UserRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+export type UserRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT';
 
 export interface School {
   id: string;
@@ -62,6 +62,9 @@ export interface SuperAdminConfig {
   recoveryEmail?: string;
   recoveryPhone?: string;
   recoveryPin: string;
+  securityQuestion?: string;
+  securityAnswer?: string;
+  securityAnswerHash?: string;
   isInitialSetupDone: boolean;
   superAdminInitialized?: boolean;
   failedLoginAttempts?: number;
@@ -251,22 +254,147 @@ export interface SchoolSettings {
   headmasterName?: string;
   headmasterPosition?: string;
   headmasterSignatureUrl?: string;
+  schoolLogoUrl?: string;
+  schoolMotto?: string;
   setupCompleted: boolean;
   updatedAt: string;
 }
 
+export type StudentStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'PROMOTED'
+  | 'REPEATED'
+  | 'GRADUATED'
+  | 'TRANSFERRED'
+  | 'WITHDRAWN'
+  | 'SUSPENDED'
+  | 'ARCHIVED';
+
 export interface ClassItem {
   id: string;
+  class_id?: string;
   schoolId: string;
+  school_id?: string;
+  academicYear?: string;
+  academic_year_id?: string;
   className: string; // e.g. "JHS 1A", "BASIC 3"
-  level: string; // e.g. "KG", "BASIC", "JHS"
+  class_name?: string;
+  classCode?: string;
+  class_code?: string;
+  level: string; // e.g. "KG", "PRIMARY", "JHS", "SHS"
   stream?: string; // e.g. "A", "B", "Gold"
-  schoolType: SchoolType;
-  academicYear: string;
+  description?: string;
+  schoolType?: SchoolType;
   classTeacherId?: string;
   classTeacherName?: string;
+  subjectIds?: string[];
+  teacherIds?: string[];
   capacity: number;
+  status: 'ACTIVE' | 'ARCHIVED' | 'INACTIVE';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface House {
+  id: string;
+  schoolId: string;
+  houseName: string;
+  houseMaster?: string;
+  houseColor?: string;
+  capacity?: number;
+  description?: string;
+  status: 'ACTIVE' | 'ARCHIVED';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StudentEnrollment {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  admissionNo: string;
+  academicYear: string;
+  classId: string;
+  className: string;
+  stream?: string;
+  house?: string;
+  status: StudentStatus;
+  promotedToClassId?: string;
+  promotedToClassName?: string;
+  enrollmentDate: string;
+  remarks?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StudentStatusHistory {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  admissionNo: string;
+  previousStatus: StudentStatus | string;
+  newStatus: StudentStatus;
+  academicYear: string;
+  reason?: string;
+  changedBy: string;
+  timestamp: string;
+}
+
+export interface TeacherSubjectAssignment {
+  id: string;
+  schoolId: string;
+  academicYear: string;
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+  teacherId: string;
+  teacherName: string;
   status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ResultSubmission {
+  id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName: string;
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+  academicYear: string;
+  term: string;
+  examType: ExamType;
+  mockNumber?: number;
+  totalStudents: number;
+  completedStudents: number;
+  missingStudents: number;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'RETURNED' | 'APPROVED' | 'PUBLISHED';
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  returnReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StorageFileRecord {
+  id: string;
+  schoolId: string;
+  storageProvider: 'SUPABASE_STORAGE' | 'GOOGLE_DRIVE' | 'LOCAL_BLOB';
+  fileId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize?: number;
+  mimeType?: string;
+  entityType: 'STUDENT' | 'TEACHER' | 'SCHOOL_LOGO' | 'DOCUMENT' | 'SIGNATURE' | 'HOUSE';
+  entityId: string;
+  fileCategory: string;
   createdAt: string;
 }
 
@@ -313,6 +441,8 @@ export interface Teacher {
   phone: string;
   email: string;
   password?: string;
+  temporaryPassword?: string;
+  isFirstLogin?: boolean;
   address?: string;
   hometown?: string;
   qualification: string;
@@ -322,6 +452,7 @@ export interface Teacher {
   classAssignedId?: string;
   classAssignedName?: string;
   assignedClassIds?: string[];
+  assignedClassNames?: string[];
   periodsCount: number;
   isClassTeacher: boolean;
   classTeacherOfId?: string;
@@ -355,7 +486,7 @@ export interface Student {
   house?: string;
   admissionDate: string;
   previousSchool?: string;
-  status: 'ACTIVE' | 'GRADUATED' | 'WITHDRAWN' | 'SUSPENDED';
+  status: StudentStatus;
   
   // Parent / Guardian
   parentName: string;
@@ -373,6 +504,7 @@ export interface Student {
   emergencyRelationship: string;
   
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface VerificationResult {
@@ -429,25 +561,36 @@ export interface ScoreEntry {
   teacherId?: string;
   teacherName?: string;
   examType: ExamType;
+  mockNumber?: number;
 
   // SBA Raw Scores
-  sbaRawScores: { [componentId: string]: number }; // { classTest: 12, classExercise: 13, projectWork: 14, groupWork: 10 }
-  sbaRawTotal: number; // 49
-  sbaRawMaxTotal: number; // 60
-  sbaScaledScore: number; // 40.8333
+  sbaRawScores?: { [componentId: string]: number }; // { classTest: 12, classExercise: 13, projectWork: 14, groupWork: 10 }
+  sbaRawTotal?: number; // 49
+  sbaRawMaxTotal?: number; // 60
+  sbaScaledScore?: number; // 40.8333
+
+  // Convenience SBA breakdown keys
+  projectScore?: number;
+  classTestScore?: number;
+  groupWorkScore?: number;
+  classExerciseScore?: number;
+  classScore50?: number;
+  examScore50?: number;
+  totalScore100?: number;
 
   // Exam
-  examRawScore: number; // 80
-  examRawMax: number; // 100
-  examScaledScore: number; // 40.0
+  examRawScore?: number; // 80
+  examRawMax?: number; // 100
+  examScaledScore?: number; // 40.0
 
   // Final Outcome
-  finalScore: number; // 80.8333
-  percentage: number; // 80.8333
+  finalScore?: number; // 80.8333
+  percentage?: number; // 80.8333
   grade: string; // 'A1'
   gradePoint?: number; // 1
-  remark: string; // 'Excellent'
-  isPass: boolean; // true
+  remark?: string; // 'Excellent'
+  remarks?: string; // alias for remark
+  isPass?: boolean; // true
 
   subjectPosition?: number; // 1
 
@@ -457,8 +600,8 @@ export interface ScoreEntry {
   publishedAt?: string;
   lockedAt?: string;
 
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface StudentReportCard {
@@ -746,5 +889,190 @@ export interface AuditLogEntry {
   details?: string;
   performedBy?: string;
 }
+
+// ==========================================
+// PART 4: TERM ATTENDANCE SUMMARY TYPES
+// ==========================================
+
+export interface TermStudentAttendance {
+  studentId: string;
+  studentName: string;
+  admissionNo: string;
+  gender?: string;
+  studentTotalAttendanceDays: number; // Student total attendance days for the term
+  totalSchoolAttendanceDays: number; // Total school attendance days for that term
+  attendancePercentage: number; // calculated: (studentTotalAttendanceDays / totalSchoolAttendanceDays) * 100
+  remark?: string;
+  updatedAt?: string;
+}
+
+export interface TermAttendanceSummary {
+  id: string; // term_att_${schoolId}_${academicYear}_${term}_${classId}
+  schoolId: string;
+  academicYear: string;
+  term: string;
+  classId: string;
+  className: string;
+  defaultTotalSchoolDays: number;
+  recordedBy: string;
+  students: TermStudentAttendance[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// PHASE 2 & 3 EXTENDED DATA TYPES
+// ==========================================
+
+export interface StorageProviderConfig {
+  id: string;
+  schoolId: string;
+  provider: 'SUPABASE' | 'GOOGLE_DRIVE';
+  isActive: boolean;
+  configData?: Record<string, any>;
+  connectedAccount?: string;
+  rootFolderId?: string;
+  rootFolderName?: string;
+  connectedAt?: string;
+  updatedAt?: string;
+}
+
+export interface StorageConnectionStatus {
+  id: string;
+  schoolId: string;
+  providerType: 'SUPABASE' | 'GOOGLE_DRIVE';
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  rootFolderId?: string;
+  storageUsageBytes?: number;
+  lastVerifiedAt?: string;
+}
+
+export interface ManagedFileRecord {
+  id: string;
+  schoolId: string;
+  ownerUserId?: string;
+  folderId?: string;
+  fileName: string;
+  mimeType: string;
+  fileCategory: 'LOGO' | 'CREST' | 'SIGNATURE' | 'PHOTO' | 'REPORT' | 'ID_CARD' | 'BROADSHEET' | 'ANALYSIS' | 'BACKUP' | 'DOCUMENT';
+  storageProvider: 'SUPABASE' | 'GOOGLE_DRIVE';
+  externalFileId?: string;
+  publicUrl: string;
+  fileSizeBytes?: number;
+  version?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IdCardTemplateConfig {
+  id: string;
+  schoolId: string;
+  templateName: string;
+  layoutConfig: {
+    cardsPerPage?: number; // e.g. 4, 8
+    orientation?: 'PORTRAIT' | 'LANDSCAPE';
+    showQrCode?: boolean;
+    showSchoolLogo?: boolean;
+    showHouse?: boolean;
+    primaryColor?: string;
+  };
+  isDefault: boolean;
+  createdAt?: string;
+}
+
+export interface ReportCardTemplateConfig {
+  id: string;
+  schoolId: string;
+  templateName: string;
+  layoutConfig: {
+    showClassPosition?: boolean;
+    showAttendance?: boolean;
+    showGradingLegend?: boolean;
+    showConduct?: boolean;
+    showNextTermDate?: boolean;
+  };
+  footerNotes?: string;
+  isDefault: boolean;
+  createdAt?: string;
+}
+
+export interface RankingResultItem {
+  id: string;
+  schoolId: string;
+  academicYear: string;
+  term: string;
+  examType: ExamType;
+  mockNumber?: number;
+  classId: string;
+  className: string;
+  studentId: string;
+  studentName: string;
+  admissionNo: string;
+  totalScore: number;
+  averageScore: number;
+  rank: number;
+  ordinalRank: string;
+  totalStudents: number;
+  passStatus: boolean;
+  calculatedAt: string;
+}
+
+export interface AnalysisSnapshot {
+  id: string;
+  schoolId: string;
+  academicYear: string;
+  term: string;
+  examType: ExamType;
+  mockNumber?: number;
+  classId?: string;
+  subjectId?: string;
+  totalStudents: number;
+  highestScore: number;
+  lowestScore: number;
+  averageScore: number;
+  passCount: number;
+  failCount: number;
+  passRate: number;
+  failRate: number;
+  gradeDistribution: Record<string, number>;
+  scoreDistribution?: { range: string; count: number }[];
+  positionDistribution?: { rank: number; studentName: string; score: number }[];
+  calculatedAt: string;
+}
+
+export interface FileVersion {
+  id: string;
+  fileId: string;
+  schoolId: string;
+  versionNumber: number;
+  fileUrl: string;
+  fileSizeBytes: number;
+  changedBy: string;
+  createdAt: string;
+}
+
+export interface ResultPublication {
+  id: string;
+  schoolId: string;
+  academicYear: string;
+  term: string;
+  examType: ExamType;
+  mockNumber?: number;
+  classId?: string;
+  isPublished: boolean;
+  publishedBy: string;
+  publishedAt: string;
+  unpublishedAt?: string;
+}
+
+export interface SetupProgressRecord {
+  id: string;
+  schoolId: string;
+  completedSteps: string[];
+  completionPercentage: number;
+  isCompleted: boolean;
+  lastSavedAt: string;
+}
+
 
 

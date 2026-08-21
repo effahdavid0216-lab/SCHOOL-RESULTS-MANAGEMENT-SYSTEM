@@ -376,7 +376,7 @@ export async function ensureSeedData() {
         updatedAt: now
       };
 
-      // Persist to Supabase and cache
+      // Persist to Supabase and cache School A
       await Promise.all([
         supabaseUpsertRecord('schools', school),
         supabaseUpsertRecord('licenses', license),
@@ -395,13 +395,117 @@ export async function ensureSeedData() {
         supabaseUpsertRecord('scoreEntries', sarahScore)
       ]);
 
+      // 10. Seed Second Tenant: School B (Presby Model School) for Multi-Tenant Isolation Verification
+      const schoolBId = 'SCH-GH-000002';
+      const schoolB: School = {
+        id: schoolBId,
+        schoolId: schoolBId,
+        name: 'Presby Model School',
+        schoolType: 'PRIMARY_JHS',
+        contactPerson: 'Mrs. Mary Ofori',
+        phone: '+233 24 999 8877',
+        email: 'info@presbymodel.edu.gh',
+        address: '45 Presbyterian Mission Way',
+        district: 'Kumasi Metropolitan',
+        region: 'Ashanti Region',
+        country: 'Ghana',
+        motto: 'Faith, Discipline, Wisdom',
+        logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=150&auto=format&fit=crop&q=80',
+        activationStatus: 'ACTIVATED',
+        status: 'ACTIVE',
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const licenseB: License = {
+        id: `lic_${schoolBId}`,
+        schoolId: schoolBId,
+        licenseKey: 'LIC-GH-2026-Y92',
+        licenseType: '12_MONTHS',
+        durationDays: 365,
+        startDate: now,
+        expiresAt: expiresIso,
+        status: 'ACTIVE',
+        createdAt: now
+      };
+
+      const classB: ClassItem = {
+        id: 'cls_b_jhs1',
+        schoolId: schoolBId,
+        className: 'JHS 1B',
+        level: 'JHS',
+        stream: 'B',
+        schoolType: 'JHS',
+        academicYear: '2026/2027',
+        classTeacherId: 'tch_b_001',
+        classTeacherName: 'Mrs. Akua Boateng',
+        capacity: 40,
+        status: 'ACTIVE',
+        createdAt: now
+      };
+
+      const teacherB: Teacher = {
+        id: 'tch_b_001',
+        schoolId: schoolBId,
+        staffId: 'TCH-2026-B01',
+        fullName: 'Mrs. Akua Boateng',
+        gender: 'FEMALE',
+        phone: '+233 20 888 7766',
+        email: 'akua.boateng@presbymodel.edu.gh',
+        qualification: 'B.Ed Basic Education',
+        dateEmployed: '2022-01-15',
+        subjectsTaughtIds: ['sub_b_math'],
+        subjectsTaughtNames: ['Mathematics'],
+        isClassTeacher: true,
+        classTeacherOfId: 'cls_b_jhs1',
+        classTeacherOfName: 'JHS 1B',
+        periodsCount: 18,
+        accountStatus: 'ACTIVE',
+        createdAt: now
+      };
+
+      const studentB: Student = {
+        id: 'stu_b_emmanuel',
+        schoolId: schoolBId,
+        studentId: 'STU-2026-B01',
+        admissionNo: 'ADM-2026-B01',
+        fullName: 'Emmanuel Osei',
+        firstName: 'Emmanuel',
+        lastName: 'Osei',
+        gender: 'MALE',
+        dateOfBirth: '2012-06-18',
+        nationality: 'Ghanaian',
+        academicYear: '2026/2027',
+        schoolType: 'JHS',
+        classId: 'cls_b_jhs1',
+        className: 'JHS 1B',
+        admissionDate: '2025-09-05',
+        status: 'ACTIVE',
+        parentName: 'Mr. Kwame Osei',
+        parentRelationship: 'Father',
+        parentPhone: '+233 24 777 6655',
+        emergencyName: 'Mrs. Faustina Osei',
+        emergencyPhone: '+233 24 777 6677',
+        emergencyRelationship: 'Mother',
+        createdAt: now
+      };
+
+      await Promise.all([
+        supabaseUpsertRecord('schools', schoolB),
+        supabaseUpsertRecord('licenses', licenseB),
+        supabaseUpsertRecord('classes', classB),
+        supabaseUpsertRecord('teachers', teacherB),
+        supabaseUpsertRecord('students', studentB)
+      ]);
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('edumaster_seed_initialized_v2', 'true');
         // Also persist to local school storage for instant hydration
         localStorage.setItem(`edumaster_school_${DEMO_SCHOOL_CREDENTIALS.schoolId}`, JSON.stringify(school));
         localStorage.setItem(`edumaster_settings_${DEMO_SCHOOL_CREDENTIALS.schoolId}`, JSON.stringify(schoolSettings));
+        localStorage.setItem(`edumaster_school_${schoolBId}`, JSON.stringify(schoolB));
       }
-      console.log('Seeded complete Supabase multi-tenant demo records successfully.');
+      console.log('Seeded complete Supabase multi-tenant demo records for School A & School B.');
     }
   } catch (err) {
     console.debug('Seed data initialization note:', err);

@@ -127,16 +127,30 @@ html:not(.dark) body {
 }
 
 /* Main background screens in light mode */
-[data-theme="light"] .bg-\[\#0a0b10\],
+[data-theme="light"] .bg-\[\#07090e\],
 [data-theme="light"] .bg-\[\#090a0f\],
+[data-theme="light"] .bg-\[\#0a0b10\],
+[data-theme="light"] .bg-\[\#0a0b12\],
 [data-theme="light"] .bg-\[\#0a0c14\],
 [data-theme="light"] .bg-\[\#0b0d17\],
+[data-theme="light"] .bg-\[\#0c0e15\],
+[data-theme="light"] .bg-\[\#0d0e17\],
+[data-theme="light"] .bg-\[\#0d0f17\],
+[data-theme="light"] .bg-\[\#0d0f18\],
+[data-theme="light"] .bg-\[\#0d101a\],
 [data-theme="light"] .bg-slate-950,
 [data-theme="light"] .bg-slate-900,
-:root:not([data-theme="dark"]) .bg-\[\#0a0b10\],
+:root:not([data-theme="dark"]) .bg-\[\#07090e\],
 :root:not([data-theme="dark"]) .bg-\[\#090a0f\],
+:root:not([data-theme="dark"]) .bg-\[\#0a0b10\],
+:root:not([data-theme="dark"]) .bg-\[\#0a0b12\],
 :root:not([data-theme="dark"]) .bg-\[\#0a0c14\],
 :root:not([data-theme="dark"]) .bg-\[\#0b0d17\],
+:root:not([data-theme="dark"]) .bg-\[\#0c0e15\],
+:root:not([data-theme="dark"]) .bg-\[\#0d0e17\],
+:root:not([data-theme="dark"]) .bg-\[\#0d0f17\],
+:root:not([data-theme="dark"]) .bg-\[\#0d0f18\],
+:root:not([data-theme="dark"]) .bg-\[\#0d101a\],
 :root:not([data-theme="dark"]) .bg-slate-950,
 :root:not([data-theme="dark"]) .bg-slate-900 {
   background-color: #f8fafc !important;
@@ -145,6 +159,8 @@ html:not(.dark) body {
 
 /* Primary cards, drawers, dialogs, modals, and panels in light mode */
 [data-theme="light"] .bg-\[\#0f111a\],
+[data-theme="light"] .bg-\[\#11131e\],
+[data-theme="light"] .bg-\[\#12141f\],
 [data-theme="light"] .bg-\[\#121420\],
 [data-theme="light"] .bg-\[\#1a1d2d\],
 [data-theme="light"] .bg-slate-900\/80,
@@ -153,6 +169,8 @@ html:not(.dark) body {
 [data-theme="light"] .bg-slate-900\/30,
 [data-theme="light"] .bg-slate-900\/90,
 :root:not([data-theme="dark"]) .bg-\[\#0f111a\],
+:root:not([data-theme="dark"]) .bg-\[\#11131e\],
+:root:not([data-theme="dark"]) .bg-\[\#12141f\],
 :root:not([data-theme="dark"]) .bg-\[\#121420\],
 :root:not([data-theme="dark"]) .bg-\[\#1a1d2d\],
 :root:not([data-theme="dark"]) .bg-slate-900\/80,
@@ -168,10 +186,13 @@ html:not(.dark) body {
 
 /* Secondary cards, credential sub-cards, input backgrounds, and tables in light mode */
 [data-theme="light"] .bg-\[\#141724\],
-[data-theme="light"] .bg-\[\#12141f\],
+[data-theme="light"] .bg-\[\#141824\],
 [data-theme="light"] .bg-\[\#141829\],
 [data-theme="light"] .bg-\[\#161925\],
+[data-theme="light"] .bg-\[\#1b1f2e\],
+[data-theme="light"] .bg-\[\#1c2030\],
 [data-theme="light"] .bg-\[\#1e2235\],
+[data-theme="light"] .bg-\[\#1f2334\],
 [data-theme="light"] .bg-\[\#151828\],
 [data-theme="light"] .bg-slate-800,
 [data-theme="light"] .bg-slate-800\/50,
@@ -179,10 +200,13 @@ html:not(.dark) body {
 [data-theme="light"] .bg-slate-800\/80,
 [data-theme="light"] .bg-blue-950\/20,
 :root:not([data-theme="dark"]) .bg-\[\#141724\],
-:root:not([data-theme="dark"]) .bg-\[\#12141f\],
+:root:not([data-theme="dark"]) .bg-\[\#141824\],
 :root:not([data-theme="dark"]) .bg-\[\#141829\],
 :root:not([data-theme="dark"]) .bg-\[\#161925\],
+:root:not([data-theme="dark"]) .bg-\[\#1b1f2e\],
+:root:not([data-theme="dark"]) .bg-\[\#1c2030\],
 :root:not([data-theme="dark"]) .bg-\[\#1e2235\],
+:root:not([data-theme="dark"]) .bg-\[\#1f2334\],
 :root:not([data-theme="dark"]) .bg-\[\#151828\],
 :root:not([data-theme="dark"]) .bg-slate-800,
 :root:not([data-theme="dark"]) .bg-slate-800\/50,
@@ -192,6 +216,42 @@ html:not(.dark) body {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
+}
+
+/* Ensure all nested typography inside light cards is dark and readable */
+[data-theme="light"] .bg-\[\#0f111a\] p,
+[data-theme="light"] .bg-\[\#0f111a\] span,
+[data-theme="light"] .bg-\[\#0f111a\] label,
+[data-theme="light"] .bg-\[\#0f111a\] h1,
+[data-theme="light"] .bg-\[\#0f111a\] h2,
+[data-theme="light"] .bg-\[\#0f111a\] h3,
+[data-theme="light"] .bg-\[\#0f111a\] h4,
+[data-theme="light"] .bg-\[\#121420\] p,
+[data-theme="light"] .bg-\[\#121420\] span,
+[data-theme="light"] .bg-\[\#121420\] label,
+[data-theme="light"] .bg-\[\#141724\] p,
+[data-theme="light"] .bg-\[\#141724\] span,
+[data-theme="light"] .bg-\[\#141724\] label,
+[data-theme="light"] .bg-\[\#161925\] p,
+[data-theme="light"] .bg-\[\#161925\] span,
+[data-theme="light"] .bg-\[\#161925\] label,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] p,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] span,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] label,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] h1,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] h2,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] h3,
+:root:not([data-theme="dark"]) .bg-\[\#0f111a\] h4,
+:root:not([data-theme="dark"]) .bg-\[\#121420\] p,
+:root:not([data-theme="dark"]) .bg-\[\#121420\] span,
+:root:not([data-theme="dark"]) .bg-\[\#121420\] label,
+:root:not([data-theme="dark"]) .bg-\[\#141724\] p,
+:root:not([data-theme="dark"]) .bg-\[\#141724\] span,
+:root:not([data-theme="dark"]) .bg-\[\#141724\] label,
+:root:not([data-theme="dark"]) .bg-\[\#161925\] p,
+:root:not([data-theme="dark"]) .bg-\[\#161925\] span,
+:root:not([data-theme="dark"]) .bg-\[\#161925\] label {
+  color: inherit;
 }
 
 /* Nested sub-boxes and credential copy strips in light mode */
@@ -214,12 +274,15 @@ html:not(.dark) body {
 [data-theme="light"] .hover\:bg-slate-800:hover,
 [data-theme="light"] .hover\:bg-slate-800\/30:hover,
 [data-theme="light"] .hover\:bg-slate-800\/50:hover,
+[data-theme="light"] .hover\:bg-slate-800\/80:hover,
 :root:not([data-theme="dark"]) .hover\:bg-\[\#161925\]:hover,
 :root:not([data-theme="dark"]) .hover\:bg-\[\#161925\]\/60:hover,
 :root:not([data-theme="dark"]) .hover\:bg-slate-800:hover,
 :root:not([data-theme="dark"]) .hover\:bg-slate-800\/30:hover,
-:root:not([data-theme="dark"]) .hover\:bg-slate-800\/50:hover {
+:root:not([data-theme="dark"]) .hover\:bg-slate-800\/50:hover,
+:root:not([data-theme="dark"]) .hover\:bg-slate-800\/80:hover {
   background-color: #e2e8f0 !important;
+  color: #0f172a !important;
 }
 
 /* Borders for crisp separation in light mode */
@@ -241,10 +304,10 @@ html:not(.dark) body {
 /* High contrast text hierarchy in light mode */
 [data-theme="light"] .text-slate-100,
 [data-theme="light"] .text-slate-200,
-[data-theme="light"] .text-white,
+[data-theme="light"] .text-white:not(.btn-colored *):not(.badge-colored *),
 :root:not([data-theme="dark"]) .text-slate-100,
 :root:not([data-theme="dark"]) .text-slate-200,
-:root:not([data-theme="dark"]) .text-white {
+:root:not([data-theme="dark"]) .text-white:not(.btn-colored *):not(.badge-colored *) {
   color: #0f172a !important;
 }
 
@@ -256,7 +319,9 @@ html:not(.dark) body {
 }
 
 [data-theme="light"] .text-slate-500,
-:root:not([data-theme="dark"]) .text-slate-500 {
+[data-theme="light"] .text-slate-600,
+:root:not([data-theme="dark"]) .text-slate-500,
+:root:not([data-theme="dark"]) .text-slate-600 {
   color: #475569 !important;
 }
 
@@ -303,6 +368,13 @@ html:not(.dark) body {
   color: #0e7490 !important;
 }
 
+[data-theme="light"] .text-indigo-300,
+[data-theme="light"] .text-indigo-400,
+:root:not([data-theme="dark"]) .text-indigo-300,
+:root:not([data-theme="dark"]) .text-indigo-400 {
+  color: #4338ca !important;
+}
+
 /* Form Controls in light mode */
 [data-theme="light"] input[type="text"],
 [data-theme="light"] input[type="email"],
@@ -325,6 +397,12 @@ html:not(.dark) body {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border: 1px solid #94a3b8 !important;
+}
+
+[data-theme="light"] select option,
+:root:not([data-theme="dark"]) select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 [data-theme="light"] input::placeholder,
@@ -388,6 +466,24 @@ html:not(.dark) body {
   background-color: #faf5ff !important;
   color: #7e22ce !important;
   border-color: #e9d5ff !important;
+}
+
+[data-theme="light"] .bg-cyan-500\/10,
+[data-theme="light"] .bg-cyan-500\/20,
+:root:not([data-theme="dark"]) .bg-cyan-500\/10,
+:root:not([data-theme="dark"]) .bg-cyan-500\/20 {
+  background-color: #ecfeff !important;
+  color: #0e7490 !important;
+  border-color: #a5f3fc !important;
+}
+
+[data-theme="light"] .bg-indigo-500\/10,
+[data-theme="light"] .bg-indigo-500\/20,
+:root:not([data-theme="dark"]) .bg-indigo-500\/10,
+:root:not([data-theme="dark"]) .bg-indigo-500\/20 {
+  background-color: #eef2ff !important;
+  color: #4338ca !important;
+  border-color: #c7d2fe !important;
 }
 
 /* ========================================================
@@ -598,20 +694,42 @@ html.dark body {
 .bg-blue-600,
 .bg-blue-700,
 .bg-indigo-600,
+.bg-indigo-700,
+.bg-cyan-600,
+.bg-cyan-700,
 .bg-emerald-600,
+.bg-emerald-700,
+.bg-teal-600,
+.bg-teal-700,
 .bg-rose-600,
+.bg-rose-700,
 .bg-purple-600,
-.bg-amber-600 {
+.bg-purple-700,
+.bg-violet-600,
+.bg-violet-700,
+.bg-amber-600,
+.bg-amber-700 {
   color: #ffffff !important;
 }
 
-.bg-blue-600 > *,
-.bg-blue-700 > *,
-.bg-indigo-600 > *,
-.bg-emerald-600 > *,
-.bg-rose-600 > *,
-.bg-purple-600 > *,
-.bg-amber-600 > * {
+.bg-blue-600 *,
+.bg-blue-700 *,
+.bg-indigo-600 *,
+.bg-indigo-700 *,
+.bg-cyan-600 *,
+.bg-cyan-700 *,
+.bg-emerald-600 *,
+.bg-emerald-700 *,
+.bg-teal-600 *,
+.bg-teal-700 *,
+.bg-rose-600 *,
+.bg-rose-700 *,
+.bg-purple-600 *,
+.bg-purple-700 *,
+.bg-violet-600 *,
+.bg-violet-700 *,
+.bg-amber-600 *,
+.bg-amber-700 * {
   color: #ffffff !important;
 }
 

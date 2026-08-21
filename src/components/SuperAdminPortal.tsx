@@ -99,6 +99,7 @@ import {
   SystemLicenseConfig,
   UserRole
 } from '../types';
+import { SchoolCreationWizardModal } from './SchoolCreationWizardModal';
 import { sha256Hash, createFullLicenseDetails, generateSecureLicenseKey, generateActivationCode, generateSecurityToken } from '../lib/licenseService';
 import { ensureSeedData } from '../lib/seedData';
 import { SuperAdminSetup } from './SuperAdminSetup';
@@ -139,16 +140,16 @@ interface Props {
   onBackToApp: () => void;
   onLoginSuccess?: (role: UserRole) => void;
   onImpersonateRole?: (role: UserRole, schoolId: string, email: string, schoolName: string, reason?: string) => void;
+  onRunDiagnostic?: () => Promise<any>;
 }
 
-export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess, onImpersonateRole }) => {
+export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess, onImpersonateRole, onRunDiagnostic }) => {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('edumaster_superadmin_authenticated');
-      if (stored === 'false') return false;
+      return localStorage.getItem('edumaster_superadmin_authenticated') === 'true';
     }
-    return true;
+    return false;
   });
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -380,6 +381,7 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
   const [resetAdminSchool, setResetAdminSchool] = useState<School | null>(null);
   const [statusSchool, setStatusSchool] = useState<School | null>(null);
   const [deletingSchool, setDeletingSchool] = useState<School | null>(null);
+  const [isCreateWizardOpen, setIsCreateWizardOpen] = useState<boolean>(false);
 
   // New System Update Form State
   const [updVersion, setUpdVersion] = useState('');
@@ -857,23 +859,30 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
     }
   };
 
-  // Session Security: Automatic Inactivity Logout (15 Minutes)
+  // Session Security: Automatic Inactivity Logout (30 Minutes)
+  const lastActivityRef = React.useRef<number>(Date.now());
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+    lastActivityRef.current = Date.now();
+    const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+    
     const handleUserActivity = () => {
-      setLastActivityTime(Date.now());
+      lastActivityRef.current = Date.now();
     };
 
-    window.addEventListener('mousemove', handleUserActivity);
-    window.addEventListener('keydown', handleUserActivity);
-    window.addEventListener('click', handleUserActivity);
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(evt => window.addEventListener(evt, handleUserActivity, { passive: true }));
 
     const interval = setInterval(() => {
-      if (Date.now() - lastActivityTime > INACTIVITY_TIMEOUT_MS) {
+      const elapsed = Date.now() - lastActivityRef.current;
+      if (elapsed > INACTIVITY_TIMEOUT_MS) {
         setIsAuthenticated(false);
-        showSyncToast('Super Admin session expired due to 15 minutes of inactivity.', 'info');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('edumaster_superadmin_authenticated');
+        }
+        showSyncToast('Super Admin session timed out due to 30 minutes of inactivity.', 'info');
         logAuditAction({
           schoolId: 'SYSTEM_SUPERADMIN',
           userEmail: usernameInput || 'superadmin',
@@ -881,17 +890,15 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
           action: 'SUPERADMIN_SESSION_TIMEOUT',
           targetRecord: 'Super Admin Portal',
           details: 'Super Admin session automatically terminated due to inactivity.'
-        });
+        }).catch(() => {});
       }
-    }, 30000);
+    }, 15000);
 
     return () => {
-      window.removeEventListener('mousemove', handleUserActivity);
-      window.removeEventListener('keydown', handleUserActivity);
-      window.removeEventListener('click', handleUserActivity);
+      events.forEach(evt => window.removeEventListener(evt, handleUserActivity));
       clearInterval(interval);
     };
-  }, [isAuthenticated, lastActivityTime, usernameInput]);
+  }, [isAuthenticated, usernameInput]);
 
   // Sensitive Operation Re-Authentication Handler
   const requireReauthentication = (sensitiveAction: () => void) => {
@@ -991,6 +998,11 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
 
       if (isUsernameMatch && isPasswordMatch) {
         setIsAuthenticated(true);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('edumaster_superadmin_authenticated', 'true');
+          localStorage.setItem('edumaster_active_role', 'SUPER_ADMIN');
+          localStorage.setItem('edumaster_active_view', 'SUPER_ADMIN');
+        }
         if (onLoginSuccess) onLoginSuccess('SUPER_ADMIN');
         setLoginError('');
         toast.success('Super Admin Login Successful!');
@@ -1873,13 +1885,23 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
         {/* Tab 2: Register New School (Super Admin Only) */}
         {activeTab === 'REGISTER' && (
           <div className="bg-[#0f111a] p-6 rounded-2xl border border-slate-800 space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-emerald-400" /> Register New School Tenant
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Only the Developer / Super Admin can register schools. Free self-registration is disabled.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-emerald-400" /> Register New School Tenant
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Only the Developer / Super Admin can register schools. Free self-registration is disabled.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateWizardOpen(true)}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/40 cursor-pointer transition-all shrink-0"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-200" />
+                <span>Launch 5-Step Creation Wizard</span>
+              </button>
             </div>
 
             <form onSubmit={handleCreateSchool} className="space-y-6">
@@ -2113,13 +2135,23 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
                 />
               </div>
 
-              <button
-                onClick={loadData}
-                disabled={loading}
-                className="px-4 py-2 bg-[#161925] hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Tenants
-              </button>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateWizardOpen(true)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/40 cursor-pointer transition-all"
+                >
+                  <Plus className="w-4 h-4" /> Create New School
+                </button>
+
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="px-4 py-2 bg-[#161925] hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Tenants
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -4010,6 +4042,18 @@ export const SuperAdminPortal: React.FC<Props> = ({ onBackToApp, onLoginSuccess,
               setActionSchoolId(null);
               setDeletingSchool(null);
             }
+          }}
+        />
+      )}
+      {/* 8. Super Admin School Creation 5-Step Wizard Modal */}
+      {isCreateWizardOpen && (
+        <SchoolCreationWizardModal
+          isOpen={isCreateWizardOpen}
+          onClose={() => setIsCreateWizardOpen(false)}
+          onSchoolCreated={async (newSchool) => {
+            await loadData();
+            setIsCreateWizardOpen(false);
+            showSyncToast(`School ${newSchool.name} (${newSchool.schoolId}) provisioned successfully!`, 'success');
           }}
         />
       )}

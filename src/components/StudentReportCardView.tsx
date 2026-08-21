@@ -18,14 +18,16 @@ import {
   ScoreEntry,
   School,
   SchoolSettings,
-  ClassItem
+  ClassItem,
+  ExamType
 } from '../types';
 import {
   getStudentsBySchool,
   getScoresByQuery,
   getSchoolDetails,
   getSchoolSettings,
-  getClassesBySchool
+  getClassesBySchool,
+  getTermAttendanceSummary
 } from '../lib/services';
 import { calculateRankings, formatOrdinalRank } from '../lib/academicEngine';
 import { printStudentReportCard } from '../lib/printService';
@@ -50,6 +52,7 @@ export const StudentReportCardView: React.FC<Props> = ({
   const [selectedStudentId, setSelectedStudentId] = useState<string>(studentId || '');
   const [academicYear, setAcademicYear] = useState<string>('2026/2027');
   const [term, setTerm] = useState<string>('Term 1');
+  const [examTypeContext, setExamTypeContext] = useState<string>('END_OF_TERM'); // 'END_OF_TERM', 'MID_TERM', 'MOCK_1', 'MOCK_2', 'MOCK_3'
 
   const [scores, setScores] = useState<ScoreEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -96,13 +99,43 @@ export const StudentReportCardView: React.FC<Props> = ({
   };
 
   const loadReportData = async () => {
-    const fetchedScores = await getScoresByQuery({
-      schoolId,
-      classId: selectedClassId,
-      academicYear,
-      term
-    });
+    let resolvedExamType: ExamType = 'END_OF_TERM';
+    let resolvedMockNumber: number | undefined = undefined;
+
+    if (examTypeContext === 'MID_TERM') {
+      resolvedExamType = 'MID_TERM';
+    } else if (examTypeContext.startsWith('MOCK_')) {
+      resolvedExamType = 'MOCK';
+      resolvedMockNumber = parseInt(examTypeContext.replace('MOCK_', ''), 10) || 1;
+    } else {
+      resolvedExamType = 'END_OF_TERM';
+    }
+
+    const [fetchedScores, termAtt] = await Promise.all([
+      getScoresByQuery({
+        schoolId,
+        classId: selectedClassId,
+        academicYear,
+        term: resolvedExamType === 'MOCK' ? undefined : term,
+        examType: resolvedExamType,
+        mockNumber: resolvedMockNumber
+      }),
+      getTermAttendanceSummary(schoolId, academicYear, term, selectedClassId)
+    ]);
     setScores(fetchedScores);
+
+    if (termAtt && termAtt.students && termAtt.students.length > 0) {
+      const studentAtt = termAtt.students.find(s => s.studentId === selectedStudentId);
+      if (studentAtt) {
+        setDaysPresent(studentAtt.studentTotalAttendanceDays);
+        setTotalDays(studentAtt.totalSchoolAttendanceDays);
+        if (studentAtt.remark) {
+          setConduct(studentAtt.remark);
+        }
+      } else if (termAtt.defaultTotalSchoolDays) {
+        setTotalDays(termAtt.defaultTotalSchoolDays);
+      }
+    }
   };
 
   const currentStudent = students.find(s => s.id === selectedStudentId);
@@ -206,9 +239,9 @@ export const StudentReportCardView: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Cascading Selection Controls: Academic Year -> Term -> Class -> Student */}
+        {/* Cascading Selection Controls: Academic Year -> Term -> Exam Type -> Class -> Student */}
         {!isStudentPortal && (
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 text-xs">
             <div>
               <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">1. Academic Year</label>
               <input
@@ -224,7 +257,8 @@ export const StudentReportCardView: React.FC<Props> = ({
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
-                className="w-full bg-[#161925] border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold focus:outline-none focus:border-blue-500"
+                disabled={examTypeContext.startsWith('MOCK_')}
+                className="w-full bg-[#161925] border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold focus:outline-none focus:border-blue-500 disabled:opacity-50"
               >
                 <option value="Term 1">Term 1</option>
                 <option value="Term 2">Term 2</option>
@@ -233,7 +267,23 @@ export const StudentReportCardView: React.FC<Props> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">3. Target Class</label>
+              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">3. Report Type</label>
+              <select
+                value={examTypeContext}
+                onChange={(e) => setExamTypeContext(e.target.value)}
+                className="w-full bg-[#161925] border border-slate-700 rounded-xl px-3 py-1.5 text-slate-200 font-semibold focus:outline-none focus:border-blue-500"
+              >
+                <option value="END_OF_TERM">End-of-Term Report</option>
+                <option value="MID_TERM">Mid-Term Assessment</option>
+                <option value="MOCK_1">Mock 1 Examination</option>
+                <option value="MOCK_2">Mock 2 Examination</option>
+                <option value="MOCK_3">Mock 3 Examination</option>
+                <option value="MOCK_4">Mock 4 Examination</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">4. Target Class</label>
               <select
                 value={selectedClassId}
                 onChange={(e) => {
@@ -256,7 +306,7 @@ export const StudentReportCardView: React.FC<Props> = ({
 
             <div>
               <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">
-                4. Student ({classStudents.length} Enrolled)
+                5. Student ({classStudents.length})
               </label>
               <select
                 value={selectedStudentId}

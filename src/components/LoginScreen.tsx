@@ -29,6 +29,7 @@ interface Props {
   onLoginSuccess: (role: UserRole, email: string, schoolId?: string) => void;
   onBackToWelcome: () => void;
   onOpenSuperAdmin: () => void;
+  onOpenSuperAdminSetup?: () => void;
   routeGuardNotice?: string | null;
   initialRole?: UserRole;
 }
@@ -37,6 +38,7 @@ export const LoginScreen: React.FC<Props> = ({
   onLoginSuccess,
   onBackToWelcome,
   onOpenSuperAdmin,
+  onOpenSuperAdminSetup,
   routeGuardNotice,
   initialRole = 'SCHOOL_ADMIN'
 }) => {
@@ -234,18 +236,8 @@ export const LoginScreen: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Role Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-[#161925] border border-slate-700/80 rounded-xl mb-6 text-[9px] font-bold uppercase tracking-wider text-center">
-          <button
-            type="button"
-            onClick={() => setActiveRole('SUPER_ADMIN')}
-            className={`py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-              activeRole === 'SUPER_ADMIN' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3 h-3 shrink-0" />
-            <span className="truncate">Super Admin</span>
-          </button>
+        {/* Role Tabs for Public School Portal Users */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-[#161925] border border-slate-700/80 rounded-xl mb-6 text-[10px] font-bold uppercase tracking-wider text-center">
           <button
             type="button"
             onClick={() => setActiveRole('SCHOOL_ADMIN')}
@@ -398,7 +390,9 @@ export const LoginScreen: React.FC<Props> = ({
               <button
                 type="submit"
                 disabled={isVerifying}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-blue-900/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                className={`w-full py-3.5 ${
+                  activeRole === 'SUPER_ADMIN' ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-blue-600 hover:bg-blue-500'
+                } disabled:opacity-60 text-white font-semibold text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-blue-900/20 transition-all cursor-pointer flex items-center justify-center gap-2`}
               >
                 {isVerifying ? (
                   <>
@@ -410,6 +404,36 @@ export const LoginScreen: React.FC<Props> = ({
                   </>
                 )}
               </button>
+
+              {activeRole === 'SUPER_ADMIN' && (
+                <div className="pt-2 text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail('effahdavid45@gmail.com');
+                        setPassword('059200');
+                      }}
+                      className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium cursor-pointer hover:underline flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      Fill Default Developer Credentials
+                    </button>
+                  </div>
+                  {onOpenSuperAdminSetup && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={onOpenSuperAdminSetup}
+                        className="text-[11px] text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer hover:underline flex items-center justify-center gap-1 mx-auto"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        Re-enter / Setup Master Credentials
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
           ) : (
             /* FORGOT PASSWORD SUPABASE AUTH WORKFLOW */

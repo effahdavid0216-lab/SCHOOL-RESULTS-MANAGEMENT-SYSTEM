@@ -10,11 +10,11 @@ import { ActivationScreen } from './components/ActivationScreen';
 import { ActivationResultModal } from './components/ActivationResultModal';
 import { SuperAdminSetup } from './components/SuperAdminSetup';
 import { SuperAdminPortal } from './components/SuperAdminPortal';
+import { SuperAdminPrivateGateway } from './components/SuperAdminPrivateGateway';
 import { SchoolSetupWizard } from './components/SchoolSetupWizard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import { StudentDashboard } from './components/StudentDashboard';
-import { ParentPortalView } from './components/ParentPortalView';
 import { LoginScreen } from './components/LoginScreen';
 import { AutoLogoutHandler } from './components/AutoLogoutHandler';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -22,28 +22,204 @@ import { useLanguage } from './context/LanguageContext';
 import { useSupabaseAuth } from './hooks/useSupabaseAuth';
 import { School, VerificationResult, UserRole } from './types';
 import { ensureSeedData } from './lib/seedData';
-import { getSchoolDetails, getGlobalSystemSettings, getSuperAdminConfig } from './lib/services';
-import { Shield, Wrench, AlertTriangle, ArrowRight, Lock, UserCheck, RotateCcw, ChevronDown } from 'lucide-react';
+import { getSchoolDetails, getGlobalSystemSettings, getSuperAdminConfig, getSchoolSettings } from './lib/services';
+import { validateSuperAdminSessionWithSupabase } from './lib/authService';
+import { supabase } from './lib/supabaseClient';
+import { Shield, Wrench, AlertTriangle, ArrowRight, Lock, UserCheck, RotateCcw, ChevronDown, Activity, CheckCircle2, XCircle, RefreshCw, Database } from 'lucide-react';
+
+export interface SupabaseDiagnosticReport {
+  connected: boolean;
+  latencyMs: number;
+  supabaseUrlConfigured: boolean;
+  supabaseAnonKeyConfigured: boolean;
+  authSessionActive: boolean;
+  sessionUserEmail?: string;
+  sessionUserId?: string;
+  tokenExpiresAt?: string;
+  tokenExpiresInSeconds?: number;
+  tableCheck: {
+    superAdminConfig: boolean;
+    schools: boolean;
+    auditLogs: boolean;
+    licenses: boolean;
+  };
+  systemTimestamp: string;
+  statusMessage: string;
+}
+
+export async function runSupabaseDiagnosticTest(): Promise<SupabaseDiagnosticReport> {
+  const startTime = performance.now();
+  const timestamp = new Date().toISOString();
+  const metaEnv = (import.meta as any).env || {};
+  const urlVal = metaEnv.VITE_SUPABASE_URL;
+  const keyVal = metaEnv.VITE_SUPABASE_ANON_KEY;
+
+  console.group(' [Diagnostic] Running Supabase connectivity & token verification...');
+  console.log('Environment configuration check:', {
+    hasUrl: !!urlVal,
+    hasKey: !!keyVal
+  });
+
+  let authSessionActive = false;
+  let sessionUserEmail: string | undefined;
+  let sessionUserId: string | undefined;
+  let tokenExpiresAt: string | undefined;
+  let tokenExpiresInSeconds: number | undefined;
+
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (!error && data.session) {
+      authSessionActive = true;
+      sessionUserEmail = data.session.user.email;
+      sessionUserId = data.session.user.id;
+      if (data.session.expires_at) {
+        tokenExpiresAt = new Date(data.session.expires_at * 1000).toISOString();
+        tokenExpiresInSeconds = Math.max(0, data.session.expires_at - Math.floor(Date.now() / 1000));
+      }
+    }
+  } catch (sessionErr) {
+    console.warn('Diagnostic auth session check notice:', sessionErr);
+  }
+
+  const tableCheck = {
+    superAdminConfig: false,
+    schools: false,
+    auditLogs: false,
+    licenses: false
+  };
+
+  try {
+    const res = await supabase.from('superAdminConfig').select('id').limit(1);
+    tableCheck.superAdminConfig = !res.error;
+  } catch { tableCheck.superAdminConfig = false; }
+
+  try {
+    const res = await supabase.from('schools').select('id').limit(1);
+    tableCheck.schools = !res.error;
+  } catch { tableCheck.schools = false; }
+
+  try {
+    const res = await supabase.from('auditLogs').select('id').limit(1);
+    tableCheck.auditLogs = !res.error;
+  } catch { tableCheck.auditLogs = false; }
+
+  try {
+    const res = await supabase.from('licenses').select('id').limit(1);
+    tableCheck.licenses = !res.error;
+  } catch { tableCheck.licenses = false; }
+
+  const latencyMs = Math.round(performance.now() - startTime);
+  const connected = tableCheck.superAdminConfig || tableCheck.schools || authSessionActive;
+
+  const report: SupabaseDiagnosticReport = {
+    connected,
+    latencyMs,
+    supabaseUrlConfigured: !!urlVal,
+    supabaseAnonKeyConfigured: !!keyVal,
+    authSessionActive,
+    sessionUserEmail,
+    sessionUserId,
+    tokenExpiresAt,
+    tokenExpiresInSeconds,
+    tableCheck,
+    systemTimestamp: timestamp,
+    statusMessage: connected
+      ? `Supabase cloud database & authentication verified (${latencyMs}ms). Services operational.`
+      : `Supabase connectivity warning (${latencyMs}ms). Verify project URL and anon keys.`
+  };
+
+  console.log('Diagnostic report summary:', report);
+  console.groupEnd();
+  return report;
+}
+
+type AppView =
+  | 'WELCOME'
+  | 'ACTIVATION'
+  | 'SUPER_ADMIN_SETUP'
+  | 'SUPER_ADMIN'
+  | 'SUPER_ADMIN_PRIVATE_GATEWAY'
+  | 'SETUP_WIZARD'
+  | 'ADMIN_DASHBOARD'
+  | 'TEACHER_DASHBOARD'
+  | 'STUDENT_DASHBOARD'
+  | 'LOGIN';
 
 export default function App() {
   const { t } = useLanguage();
-  const [view, setView] = useState<
-    | 'WELCOME'
-    | 'ACTIVATION'
-    | 'SUPER_ADMIN_SETUP'
-    | 'SUPER_ADMIN'
-    | 'SETUP_WIZARD'
-    | 'ADMIN_DASHBOARD'
-    | 'TEACHER_DASHBOARD'
-    | 'STUDENT_DASHBOARD'
-    | 'PARENT_PORTAL'
-    | 'LOGIN'
-  >('WELCOME');
+
+  // Hydrate initial view and role from persistent browser storage
+  const getInitialView = (): AppView => {
+    if (typeof window === 'undefined') return 'WELCOME';
+    const path = window.location.pathname.toLowerCase();
+    if (path.startsWith('/super-admin/setup')) return 'SUPER_ADMIN_SETUP';
+    
+    const isSuperAdmin = localStorage.getItem('edumaster_superadmin_authenticated') === 'true';
+    if (
+      path.startsWith('/super-admin') ||
+      path.startsWith('/system-owner') ||
+      path.startsWith('/owner-portal') ||
+      path.startsWith('/admin/private-access')
+    ) {
+      if (isSuperAdmin) return 'SUPER_ADMIN';
+      return 'SUPER_ADMIN_PRIVATE_GATEWAY';
+    }
+
+    const storedView = localStorage.getItem('edumaster_active_view') as AppView | null;
+    const storedRole = localStorage.getItem('edumaster_active_role') as UserRole | null;
+
+    if (
+      storedView &&
+      storedView !== 'WELCOME' &&
+      storedView !== 'LOGIN' &&
+      storedView !== 'SUPER_ADMIN' &&
+      storedView !== 'SUPER_ADMIN_PRIVATE_GATEWAY'
+    ) {
+      return storedView;
+    }
+    if (storedRole && storedRole !== 'SUPER_ADMIN') {
+      if (storedRole === 'TEACHER') return 'TEACHER_DASHBOARD';
+      if (storedRole === 'STUDENT') return 'STUDENT_DASHBOARD';
+      if (storedRole === 'SCHOOL_ADMIN') return 'ADMIN_DASHBOARD';
+    }
+    return 'WELCOME';
+  };
+
+  const getInitialRole = (): UserRole | null => {
+    if (typeof window === 'undefined') return null;
+    const isSuperAdmin = localStorage.getItem('edumaster_superadmin_authenticated') === 'true';
+    if (isSuperAdmin) return 'SUPER_ADMIN';
+    const storedRole = localStorage.getItem('edumaster_active_role') as UserRole | null;
+    if (storedRole === 'SUPER_ADMIN' && !isSuperAdmin) return null;
+    return storedRole || null;
+  };
+
+  const [view, setViewInternal] = useState<AppView>(getInitialView);
+
+  const setView = (newView: AppView | ((prev: AppView) => AppView)) => {
+    setViewInternal((prev) => {
+      const resolved = typeof newView === 'function' ? newView(prev) : newView;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('edumaster_active_view', resolved);
+      }
+      return resolved;
+    });
+  };
 
   const [activeSchool, setActiveSchool] = useState<School | null>(null);
-  const [activeSchoolId, setActiveSchoolId] = useState<string>('SCH-GH-000001');
-  const [userEmail, setUserEmail] = useState<string>('admin@school.edu.gh');
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
+  const [activeSchoolId, setActiveSchoolId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('edumaster_active_school_id') || 'SCH-GH-000001';
+    }
+    return 'SCH-GH-000001';
+  });
+  const [userEmail, setUserEmail] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('edumaster_user_email') || 'admin@school.edu.gh';
+    }
+    return 'admin@school.edu.gh';
+  });
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(getInitialRole);
   const [initialLoginRole, setInitialLoginRole] = useState<UserRole>('SCHOOL_ADMIN');
   const [routeGuardNotice, setRouteGuardNotice] = useState<string | null>(null);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
@@ -51,6 +227,20 @@ export default function App() {
   const [bypassPinInput, setBypassPinInput] = useState('');
   const [bypassError, setBypassError] = useState('');
   const [isSuperAdminLoading, setIsSuperAdminLoading] = useState(false);
+  const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
+  const [diagnosticReport, setDiagnosticReport] = useState<SupabaseDiagnosticReport | null>(null);
+  const [isRunningDiagnostic, setIsRunningDiagnostic] = useState(false);
+
+  const handleRunDiagnostic = async () => {
+    setIsRunningDiagnostic(true);
+    try {
+      const result = await runSupabaseDiagnosticTest();
+      setDiagnosticReport(result);
+      return result;
+    } finally {
+      setIsRunningDiagnostic(false);
+    }
+  };
 
   // Super Admin Role Impersonation Session State
   const [impersonationSession, setImpersonationSession] = useState<{
@@ -63,25 +253,44 @@ export default function App() {
   } | null>(null);
   const [showRoleSwitcherDropdown, setShowRoleSwitcherDropdown] = useState(false);
 
-
   // Supabase Auth session synchronization hook
   const supabaseAuth = useSupabaseAuth();
 
   useEffect(() => {
-    if (supabaseAuth.authenticated && supabaseAuth.user) {
-      if (supabaseAuth.role) {
-        setCurrentUserRole(supabaseAuth.role as UserRole);
+    console.log(' [App.tsx:supabaseAuthSync] Supabase auth state update received:', {
+      authenticated: supabaseAuth.authenticated,
+      role: supabaseAuth.role,
+      schoolId: supabaseAuth.schoolId,
+      userEmail: supabaseAuth.user?.email,
+      currentView: view
+    });
+
+    if (supabaseAuth.authenticated) {
+      const authRole = supabaseAuth.role as UserRole | null;
+      if (authRole) {
+        setCurrentUserRole(authRole);
       }
       if (supabaseAuth.schoolId) {
         setActiveSchoolId(supabaseAuth.schoolId);
       }
-      if (supabaseAuth.user.email) {
+      if (supabaseAuth.user?.email) {
         setUserEmail(supabaseAuth.user.email);
       }
+
+      // Synchronize view on reload
+      setViewInternal((currentView) => {
+        if (currentView === 'WELCOME') {
+          if (authRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+          if (authRole === 'TEACHER') return 'TEACHER_DASHBOARD';
+          if (authRole === 'STUDENT') return 'STUDENT_DASHBOARD';
+          if (authRole === 'SCHOOL_ADMIN') return 'ADMIN_DASHBOARD';
+        }
+        return currentView;
+      });
     }
   }, [supabaseAuth.authenticated, supabaseAuth.role, supabaseAuth.schoolId, supabaseAuth.user]);
 
-  // Route Guard check for Super Admin access
+  // Route Guard check for Super Admin access with server-side Supabase getUser() & RLS validation
   const enforceSuperAdminRouteGuard = async (requestedPath?: string) => {
     try {
       const cfg = await getSuperAdminConfig();
@@ -97,32 +306,38 @@ export default function App() {
         return;
       }
 
-      const isStoredAuth = typeof window !== 'undefined' && localStorage.getItem('edumaster_superadmin_authenticated') === 'true';
+      // Re-validate the 'edumaster_superadmin_authenticated' flag via Supabase getUser() and RLS check
+      const validation = await validateSuperAdminSessionWithSupabase();
 
-      // Initialized -> verify SUPER_ADMIN authentication
-      if (currentUserRole === 'SUPER_ADMIN' || view === 'SUPER_ADMIN' || isStoredAuth) {
+      if (validation.isValid) {
         setRouteGuardNotice(null);
-        if (currentUserRole !== 'SUPER_ADMIN') {
-          setCurrentUserRole('SUPER_ADMIN');
-        }
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('edumaster_superadmin_authenticated', 'true');
+        setCurrentUserRole('SUPER_ADMIN');
+        if (validation.email) {
+          setUserEmail(validation.email);
         }
         setView('SUPER_ADMIN');
         if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/super-admin')) {
           window.history.pushState({}, '', requestedPath || '/super-admin/dashboard');
         }
       } else {
-        setRouteGuardNotice("Please sign in with your Super Admin credentials to access the Developer Portal.");
-        setInitialLoginRole('SUPER_ADMIN');
-        setView('LOGIN');
+        // Validation failed or revoked: purge stale credentials and route to private gateway
         if (typeof window !== 'undefined') {
-          window.history.replaceState({}, '', '/login');
+          localStorage.removeItem('edumaster_superadmin_authenticated');
+          if (localStorage.getItem('edumaster_active_role') === 'SUPER_ADMIN') {
+            localStorage.removeItem('edumaster_active_role');
+          }
+        }
+        setView('SUPER_ADMIN_PRIVATE_GATEWAY');
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/super-admin/login');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Route Guard Error:', err);
-      setView('LOGIN');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('edumaster_superadmin_authenticated');
+      }
+      setView('SUPER_ADMIN_PRIVATE_GATEWAY');
     }
   };
 
@@ -136,19 +351,37 @@ export default function App() {
   };
 
   const handleSuperAdminSetupComplete = () => {
-    setRouteGuardNotice("Super Admin setup completed successfully! Please sign in with your newly created Super Admin credentials.");
-    setInitialLoginRole('SUPER_ADMIN');
-    setView('LOGIN');
+    setView('SUPER_ADMIN_PRIVATE_GATEWAY');
     if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/login');
+      window.history.pushState({}, '', '/super-admin/login');
+    }
+  };
+
+  const handlePrivateGatewayLoginSuccess = (email: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('edumaster_superadmin_authenticated', 'true');
+      localStorage.setItem('edumaster_active_role', 'SUPER_ADMIN');
+      localStorage.setItem('edumaster_active_view', 'SUPER_ADMIN');
+      localStorage.setItem('edumaster_user_email', email);
+    }
+    setUserEmail(email);
+    setCurrentUserRole('SUPER_ADMIN');
+    setView('SUPER_ADMIN');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/super-admin/dashboard');
     }
   };
 
   useEffect(() => {
-    // Listen for URL changes and enforce route guard for /super-admin/*
+    // Listen for URL changes and enforce route guard for /super-admin/* and private owner URLs
     const handleLocationChange = () => {
-      const path = window.location.pathname;
-      if (path.startsWith('/super-admin')) {
+      const path = window.location.pathname.toLowerCase();
+      if (
+        path.startsWith('/super-admin') ||
+        path.startsWith('/system-owner') ||
+        path.startsWith('/owner-portal') ||
+        path.startsWith('/admin/private-access')
+      ) {
         enforceSuperAdminRouteGuard(path);
       }
     };
@@ -209,6 +442,11 @@ export default function App() {
     }
 
     if (role === 'SUPER_ADMIN') {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('edumaster_superadmin_authenticated', 'true');
+        localStorage.setItem('edumaster_active_role', 'SUPER_ADMIN');
+        localStorage.setItem('edumaster_active_view', 'SUPER_ADMIN');
+      }
       setRouteGuardNotice(null);
       setView('SUPER_ADMIN');
       if (typeof window !== 'undefined') {
@@ -216,12 +454,21 @@ export default function App() {
       }
     } else if (role === 'TEACHER') {
       setView('TEACHER_DASHBOARD');
-    } else if (role === 'PARENT') {
-      setView('PARENT_PORTAL');
     } else if (role === 'STUDENT') {
       setView('STUDENT_DASHBOARD');
     } else {
-      setView('ADMIN_DASHBOARD');
+      // Check if School Admin setup wizard has been completed
+      try {
+        const settings = await getSchoolSettings(schId);
+        const isSetupCompleted = settings?.setupCompleted === true;
+        if (!isSetupCompleted && schDetails) {
+          setView('SETUP_WIZARD');
+        } else {
+          setView('ADMIN_DASHBOARD');
+        }
+      } catch {
+        setView('ADMIN_DASHBOARD');
+      }
     }
   };
 
@@ -247,8 +494,6 @@ export default function App() {
       setView('TEACHER_DASHBOARD');
     } else if (role === 'STUDENT') {
       setView('STUDENT_DASHBOARD');
-    } else if (role === 'PARENT') {
-      setView('PARENT_PORTAL');
     } else {
       setView('ADMIN_DASHBOARD');
     }
@@ -260,8 +505,7 @@ export default function App() {
       SUPER_ADMIN: 'superadmin@system.master',
       SCHOOL_ADMIN: 'admin@school.edu.gh',
       TEACHER: 'e.osei@school.edu.gh',
-      STUDENT: 'STU-2026-001',
-      PARENT: 'parent@edu.gh'
+      STUDENT: 'STU-2026-001'
     };
 
     const targetEmail = defaultEmails[newRole] || `${newRole.toLowerCase()}@school.edu.gh`;
@@ -278,8 +522,6 @@ export default function App() {
       setView('TEACHER_DASHBOARD');
     } else if (newRole === 'STUDENT') {
       setView('STUDENT_DASHBOARD');
-    } else if (newRole === 'PARENT') {
-      setView('PARENT_PORTAL');
     } else if (newRole === 'SUPER_ADMIN') {
       handleExitImpersonation();
     } else {
@@ -314,8 +556,7 @@ export default function App() {
     view === 'SUPER_ADMIN' ||
     view === 'ADMIN_DASHBOARD' ||
     view === 'TEACHER_DASHBOARD' ||
-    view === 'STUDENT_DASHBOARD' ||
-    view === 'PARENT_PORTAL';
+    view === 'STUDENT_DASHBOARD';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090a0f] text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-600 selection:text-white transition-colors duration-200">
@@ -386,13 +627,6 @@ export default function App() {
                     className="w-full text-left px-3 py-1.5 text-xs text-slate-200 hover:bg-purple-600 hover:text-white transition-colors cursor-pointer"
                   >
                     Student / Learner
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchImpersonationRole('PARENT')}
-                    className="w-full text-left px-3 py-1.5 text-xs text-slate-200 hover:bg-amber-600 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Parent / Guardian
                   </button>
                 </div>
               )}
@@ -502,16 +736,46 @@ export default function App() {
           {view === 'SUPER_ADMIN_SETUP' && (
             <SuperAdminSetup
               onSetupComplete={handleSuperAdminSetupComplete}
-              onCancel={() => setView('WELCOME')}
+              onCancel={() => {
+                setView('WELCOME');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+              }}
+              onRunDiagnostic={handleRunDiagnostic}
             />
           )}
 
-          {/* 4. Developer Super Admin Portal */}
+          {/* 4. Super Admin Private Gateway (Hidden from Public Login) */}
+          {view === 'SUPER_ADMIN_PRIVATE_GATEWAY' && (
+            <SuperAdminPrivateGateway
+              onLoginSuccess={handlePrivateGatewayLoginSuccess}
+              onOpenSetup={() => {
+                setView('SUPER_ADMIN_SETUP');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/super-admin/setup');
+              }}
+              onBackToPublicSite={() => {
+                setView('WELCOME');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+              }}
+              onRunDiagnostic={handleRunDiagnostic}
+            />
+          )}
+
+          {/* 5. Developer Super Admin Portal */}
           {view === 'SUPER_ADMIN' && (
             <SuperAdminPortal
-              onBackToApp={() => setView('WELCOME')}
+              onBackToApp={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('edumaster_superadmin_authenticated');
+                  localStorage.removeItem('edumaster_active_role');
+                  localStorage.setItem('edumaster_active_view', 'WELCOME');
+                  window.history.pushState({}, '', '/');
+                }
+                setCurrentUserRole(null);
+                setView('WELCOME');
+              }}
               onLoginSuccess={(role) => setCurrentUserRole(role)}
               onImpersonateRole={handleLaunchRoleImpersonation}
+              onRunDiagnostic={handleRunDiagnostic}
             />
           )}
 
@@ -559,24 +823,13 @@ export default function App() {
             />
           )}
 
-          {/* 8. Parent Portal */}
-          {view === 'PARENT_PORTAL' && (
-            <ParentPortalView
-              schoolId={activeSchoolId}
-              parentEmail={userEmail}
-              onLogout={() => {
-                setCurrentUserRole(null);
-                setView('WELCOME');
-              }}
-            />
-          )}
-
           {/* 8. Authorized Portal Login */}
           {view === 'LOGIN' && (
             <LoginScreen
               onLoginSuccess={handleLoginSuccess}
               onBackToWelcome={() => setView('WELCOME')}
               onOpenSuperAdmin={attemptOpenSuperAdmin}
+              onOpenSuperAdminSetup={() => setView('SUPER_ADMIN_SETUP')}
               routeGuardNotice={routeGuardNotice}
               initialRole={initialLoginRole}
             />

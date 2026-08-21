@@ -94,18 +94,35 @@ CREATE TABLE IF NOT EXISTS public."schoolAdmins" (
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5B. ACADEMIC YEARS
+CREATE TABLE IF NOT EXISTS public."academicYears" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "academicYear" TEXT NOT NULL, -- e.g. '2026/2027'
+  "startDate" DATE,
+  "endDate" DATE,
+  "isCurrent" BOOLEAN DEFAULT false,
+  status TEXT DEFAULT 'ACTIVE', -- 'ACTIVE' | 'ARCHIVED' | 'UPCOMING'
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_school_academic_year UNIQUE ("schoolId", "academicYear")
+);
+
 -- 6. CLASSES
 CREATE TABLE IF NOT EXISTS public.classes (
   id TEXT PRIMARY KEY,
   "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
   "className" TEXT NOT NULL,
+  "classCode" TEXT,
   level TEXT,
   stream TEXT,
   "schoolType" TEXT,
   "academicYear" TEXT,
+  "academicYearId" TEXT REFERENCES public."academicYears"(id) ON DELETE SET NULL,
   "classTeacherId" TEXT,
   "classTeacherName" TEXT,
   capacity INTEGER DEFAULT 45,
+  description TEXT,
   status TEXT DEFAULT 'ACTIVE',
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
@@ -601,6 +618,228 @@ CREATE INDEX IF NOT EXISTS idx_attendance_query ON public.attendance("schoolId",
 CREATE INDEX IF NOT EXISTS idx_bulk_attendance_query ON public."bulkAttendance"("schoolId", "classId", date);
 CREATE INDEX IF NOT EXISTS idx_fee_invoices_query ON public."feeInvoices"("schoolId", "studentId");
 CREATE INDEX IF NOT EXISTS idx_audit_logs_query ON public."auditLogs"("schoolId", timestamp DESC);
+
+-- =============================================================================
+-- 19. PHASE 2/3 EXTENDED TABLES (Storage, ID Cards, Reports, Rankings, Analysis)
+-- =============================================================================
+
+-- STORAGE PROVIDERS & CONNECTIONS
+CREATE TABLE IF NOT EXISTS public."storageProviders" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  provider TEXT NOT NULL DEFAULT 'SUPABASE', -- 'SUPABASE' | 'GOOGLE_DRIVE'
+  "isActive" BOOLEAN DEFAULT true,
+  "configData" JSONB DEFAULT '{}'::jsonb,
+  "connectedAccount" TEXT,
+  "connectedAt" TIMESTAMPTZ,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public."storageConnections" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "providerType" TEXT NOT NULL,
+  status TEXT DEFAULT 'CONNECTED',
+  "rootFolderId" TEXT,
+  "storageUsageBytes" BIGINT DEFAULT 0,
+  "lastVerifiedAt" TIMESTAMPTZ DEFAULT NOW(),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- EXTENDED MANAGED FILES & VERSIONS
+CREATE TABLE IF NOT EXISTS public."managedFiles" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "ownerUserId" TEXT,
+  "folderId" TEXT,
+  "fileName" TEXT NOT NULL,
+  "mimeType" TEXT NOT NULL,
+  "fileCategory" TEXT NOT NULL, -- 'LOGO' | 'CREST' | 'SIGNATURE' | 'PHOTO' | 'REPORT' | 'ID_CARD'
+  "storageProvider" TEXT NOT NULL DEFAULT 'SUPABASE',
+  "externalFileId" TEXT,
+  "publicUrl" TEXT NOT NULL,
+  "fileSizeBytes" BIGINT,
+  version INTEGER DEFAULT 1,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public."fileVersions" (
+  id TEXT PRIMARY KEY,
+  "fileId" TEXT NOT NULL REFERENCES public."managedFiles"(id) ON DELETE CASCADE,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  version INTEGER NOT NULL,
+  "fileUrl" TEXT NOT NULL,
+  "changedBy" TEXT,
+  "changeReason" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ID CARD & REPORT TEMPLATES
+CREATE TABLE IF NOT EXISTS public."idCardTemplates" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "templateName" TEXT NOT NULL,
+  "layoutConfig" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "isDefault" BOOLEAN DEFAULT false,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public."reportTemplates" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "templateName" TEXT NOT NULL,
+  "layoutConfig" JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "footerNotes" TEXT,
+  "showPosition" BOOLEAN DEFAULT true,
+  "showAttendance" BOOLEAN DEFAULT true,
+  "isDefault" BOOLEAN DEFAULT true,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RESULT SUBMISSIONS & PUBLICATIONS WORKFLOW
+CREATE TABLE IF NOT EXISTS public."resultSubmissions" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "academicYear" TEXT NOT NULL,
+  term TEXT NOT NULL,
+  "examType" TEXT NOT NULL,
+  "classId" TEXT NOT NULL REFERENCES public.classes(id) ON DELETE CASCADE,
+  "className" TEXT NOT NULL,
+  "subjectId" TEXT NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
+  "subjectName" TEXT NOT NULL,
+  "teacherId" TEXT NOT NULL,
+  "teacherName" TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'DRAFT', -- 'DRAFT' | 'IN_PROGRESS' | 'SUBMITTED' | 'REVIEWED' | 'APPROVED' | 'PUBLISHED' | 'UNPUBLISHED'
+  "totalStudents" INTEGER DEFAULT 0,
+  "completedScoresCount" INTEGER DEFAULT 0,
+  "submittedAt" TIMESTAMPTZ,
+  "reviewedAt" TIMESTAMPTZ,
+  "reviewedBy" TEXT,
+  "reviewRemarks" TEXT,
+  "publishedAt" TIMESTAMPTZ,
+  "publishedBy" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public."resultPublications" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "academicYear" TEXT NOT NULL,
+  term TEXT NOT NULL,
+  "examType" TEXT NOT NULL,
+  "classId" TEXT NOT NULL,
+  "isPublished" BOOLEAN DEFAULT false,
+  "publishedBy" TEXT,
+  "publishedAt" TIMESTAMPTZ,
+  "reopenedBy" TEXT,
+  "reopenedAt" TIMESTAMPTZ,
+  "reopenReason" TEXT
+);
+
+-- RANKING RESULTS & ANALYSIS SNAPSHOTS
+CREATE TABLE IF NOT EXISTS public."rankingResults" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "academicYear" TEXT NOT NULL,
+  term TEXT NOT NULL,
+  "examType" TEXT NOT NULL,
+  "classId" TEXT NOT NULL,
+  "studentId" TEXT NOT NULL,
+  "totalScore" NUMERIC NOT NULL,
+  "averageScore" NUMERIC NOT NULL,
+  rank INTEGER NOT NULL,
+  "ordinalRank" TEXT NOT NULL,
+  "isTie" BOOLEAN DEFAULT false,
+  "calculatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public."analysisSnapshots" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "academicYear" TEXT NOT NULL,
+  term TEXT NOT NULL,
+  "examType" TEXT NOT NULL,
+  "classId" TEXT,
+  "subjectId" TEXT,
+  "metricsData" JSONB NOT NULL,
+  "generatedBy" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SETUP PROGRESS TRACKER
+CREATE TABLE IF NOT EXISTS public."setupProgress" (
+  id TEXT PRIMARY KEY,
+  "schoolId" TEXT UNIQUE NOT NULL REFERENCES public.schools("schoolId") ON DELETE CASCADE,
+  "completedSteps" JSONB DEFAULT '[]'::jsonb,
+  "completionPercentage" INTEGER DEFAULT 0,
+  "isCompleted" BOOLEAN DEFAULT false,
+  "lastSavedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- =============================================================================
+
+-- Enable RLS on all tenant-owned tables
+ALTER TABLE public.schools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.licenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."schoolSettings" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."schoolAdmins" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.teachers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.houses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."studentEnrollments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."studentStatusHistory" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."teacherSubjectAssignments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."termAttendanceSummaries" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."reportCards" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."auditLogs" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."resultSubmissions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."resultPublications" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."rankingResults" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."storageProviders" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."managedFiles" ENABLE ROW LEVEL SECURITY;
+
+-- 1. Super Admin Full Access Policy (Global Platform)
+CREATE POLICY "Super Admin Full Access" ON public.schools
+  FOR ALL USING (auth.jwt() ->> 'role' = 'super_admin' OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'super_admin');
+
+-- 2. School Admin Isolation Policy (Tenant Scoped by schoolId)
+CREATE POLICY "School Admin Tenant Isolation - Classes" ON public.classes
+  FOR ALL USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') OR auth.jwt() ->> 'role' = 'super_admin');
+
+CREATE POLICY "School Admin Tenant Isolation - Students" ON public.students
+  FOR ALL USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') OR auth.jwt() ->> 'role' = 'super_admin');
+
+CREATE POLICY "School Admin Tenant Isolation - Teachers" ON public.teachers
+  FOR ALL USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') OR auth.jwt() ->> 'role' = 'super_admin');
+
+CREATE POLICY "School Admin Tenant Isolation - Scores" ON public.scores
+  FOR ALL USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') OR auth.jwt() ->> 'role' = 'super_admin');
+
+CREATE POLICY "School Admin Tenant Isolation - AuditLogs" ON public."auditLogs"
+  FOR ALL USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') OR auth.jwt() ->> 'role' = 'super_admin');
+
+CREATE POLICY "School Admin Tenant Isolation - Submissions" ON public."resultSubmissions"
+  FOR ALL USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') OR auth.jwt() ->> 'role' = 'super_admin');
+
+-- 3. Teacher Access Policy (Tenant and assigned classes/subjects)
+CREATE POLICY "Teacher Access - Scores" ON public.scores
+  FOR SELECT USING ("schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId'));
+
+-- 4. Student Access Policy (Own records and published scores only)
+CREATE POLICY "Student Access - Scores" ON public.scores
+  FOR SELECT USING (
+    "schoolId" = (auth.jwt() -> 'app_metadata' ->> 'schoolId') AND 
+    "studentId" = (auth.jwt() -> 'app_metadata' ->> 'studentId') AND
+    status = 'PUBLISHED'
+  );
 
 -- =============================================================================
 -- STORAGE BUCKETS (Run in Supabase Dashboard or SQL editor)

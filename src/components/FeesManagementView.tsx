@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Plus, Printer, CheckCircle2, FileText, CreditCard, PieChart, Search, Download } from 'lucide-react';
 import { ClassItem, Student, FeeCategoryType, FeeStructure, StudentFeeInvoice, FeePaymentRecord } from '../types';
 import { getClassesBySchool, getStudentsBySchool, getFeeStructuresBySchool, saveFeeStructure, getFeeInvoicesBySchool, saveFeeInvoice, getFeePaymentsBySchool, recordFeePayment } from '../lib/services';
+import { PageHeader, Badge, Button, Input, Select, Card, Modal } from './ui';
 
 interface Props {
   schoolId: string;
@@ -162,85 +163,84 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
     <div className="space-y-6">
       {/* Financial Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-[#0f111a] rounded-2xl border border-slate-800 shadow-xl space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Fees Billed</span>
-          <p className="text-2xl font-bold text-white font-mono">GHS {totalBilledAll.toLocaleString()}</p>
-          <span className="text-[10px] text-slate-500 block">Across {invoices.length} student invoices</span>
+        <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">Total Fees Billed</span>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono">GHS {totalBilledAll.toLocaleString()}</p>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Across {invoices.length} student invoices</span>
         </div>
 
-        <div className="p-4 bg-[#0f111a] rounded-2xl border border-slate-800 shadow-xl space-y-1">
-          <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Total Fees Collected</span>
-          <p className="text-2xl font-bold text-emerald-400 font-mono">GHS {totalPaidAll.toLocaleString()}</p>
-          <span className="text-[10px] text-slate-500 block">{totalBilledAll > 0 ? Math.round((totalPaidAll / totalBilledAll) * 100) : 0}% Collection Rate</span>
+        <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">Total Fees Collected</span>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">GHS {totalPaidAll.toLocaleString()}</p>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 block">{totalBilledAll > 0 ? Math.round((totalPaidAll / totalBilledAll) * 100) : 0}% Collection Rate</span>
         </div>
 
-        <div className="p-4 bg-[#0f111a] rounded-2xl border border-slate-800 shadow-xl space-y-1">
-          <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Outstanding Arrears</span>
-          <p className="text-2xl font-bold text-rose-400 font-mono">GHS {totalOutstandingAll.toLocaleString()}</p>
-          <span className="text-[10px] text-slate-500 block">Uncollected student balances</span>
+        <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-rose-600 dark:text-rose-400 tracking-wider">Outstanding Arrears</span>
+          <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">GHS {totalOutstandingAll.toLocaleString()}</p>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Uncollected student balances</span>
         </div>
       </div>
 
       {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0f111a] p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant={activeTab === 'INVOICES' ? 'primary' : 'outline'}
+            size="sm"
             onClick={() => setActiveTab('INVOICES')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
-              activeTab === 'INVOICES' ? 'bg-blue-600 text-white' : 'bg-[#161925] text-slate-300 hover:bg-slate-800'
-            }`}
           >
             Student Invoices ({invoices.length})
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={activeTab === 'STRUCTURES' ? 'primary' : 'outline'}
+            size="sm"
             onClick={() => setActiveTab('STRUCTURES')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
-              activeTab === 'STRUCTURES' ? 'bg-blue-600 text-white' : 'bg-[#161925] text-slate-300 hover:bg-slate-800'
-            }`}
           >
             Class Fee Structures ({feeStructures.length})
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={activeTab === 'PAYMENTS' ? 'primary' : 'outline'}
+            size="sm"
             onClick={() => setActiveTab('PAYMENTS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
-              activeTab === 'PAYMENTS' ? 'bg-blue-600 text-white' : 'bg-[#161925] text-slate-300 hover:bg-slate-800'
-            }`}
           >
             Payment Receipts Log ({payments.length})
-          </button>
+          </Button>
         </div>
 
         {activeTab === 'STRUCTURES' && (
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setShowStructModal(true)}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-lg shadow-blue-600/20"
+            leftIcon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> Create Class Fee Schedule
-          </button>
+            Create Class Fee Schedule
+          </Button>
         )}
       </div>
 
       {/* Invoices Tab */}
       {activeTab === 'INVOICES' && (
-        <div className="bg-[#0f111a] rounded-2xl border border-slate-800 shadow-xl overflow-hidden space-y-4 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden space-y-4 p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-sm">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search student, admission no, class..."
-                className="w-full pl-9 pr-4 py-2 bg-[#161925] border border-slate-700/80 rounded-xl text-xs text-slate-200 outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500"
               />
             </div>
-            <span className="text-xs text-slate-400">Showing {filteredInvoices.length} Invoices</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Showing {filteredInvoices.length} Invoices</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#121420] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-100 dark:border-slate-800">
                   <th className="p-3">Student</th>
                   <th className="p-3">Admission No</th>
                   <th className="p-3">Class</th>
@@ -251,38 +251,33 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
                   <th className="p-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {filteredInvoices.map(inv => (
-                  <tr key={inv.id} className="hover:bg-[#141724]">
-                    <td className="p-3 font-semibold text-white">{inv.studentName}</td>
-                    <td className="p-3 text-slate-400 font-mono">{inv.admissionNo}</td>
+                  <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="p-3 font-semibold text-slate-900 dark:text-white">{inv.studentName}</td>
+                    <td className="p-3 text-slate-500 dark:text-slate-400 font-mono">{inv.admissionNo}</td>
                     <td className="p-3">{inv.className}</td>
                     <td className="p-3 text-right font-mono">GHS {inv.totalBilled.toLocaleString()}</td>
-                    <td className="p-3 text-right font-mono text-emerald-400">GHS {inv.totalPaid.toLocaleString()}</td>
-                    <td className="p-3 text-right font-mono text-rose-400">GHS {inv.outstandingBalance.toLocaleString()}</td>
+                    <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400">GHS {inv.totalPaid.toLocaleString()}</td>
+                    <td className="p-3 text-right font-mono text-rose-600 dark:text-rose-400">GHS {inv.outstandingBalance.toLocaleString()}</td>
                     <td className="p-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                        inv.status === 'PAID'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : inv.status === 'PARTIAL'
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                      }`}>
+                      <Badge variant={inv.status === 'PAID' ? 'success' : inv.status === 'PARTIAL' ? 'warning' : 'danger'}>
                         {inv.status}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="p-3 text-right">
-                      <button
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => {
                           setSelectedInvoice(inv);
                           setPayAmount(inv.outstandingBalance);
                           setShowPayModal(true);
                         }}
                         disabled={inv.outstandingBalance <= 0}
-                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-semibold rounded-lg text-[11px] cursor-pointer"
                       >
                         Record Payment
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -296,20 +291,20 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
       {activeTab === 'STRUCTURES' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {feeStructures.map(struct => (
-            <div key={struct.id} className="bg-[#0f111a] p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div key={struct.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
-                  <h3 className="font-semibold text-white text-base">{struct.className} Fee Schedule</h3>
-                  <span className="text-[10px] text-slate-400">{struct.academicYear} • {struct.term}</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white text-base">{struct.className} Fee Schedule</h3>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">{struct.academicYear} • {struct.term}</span>
                 </div>
-                <span className="text-lg font-bold text-emerald-400 font-mono">GHS {struct.totalAmount.toLocaleString()}</span>
+                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">GHS {struct.totalAmount.toLocaleString()}</span>
               </div>
 
               <div className="space-y-1.5 text-xs">
                 {struct.feeItems.map(item => (
-                  <div key={item.id} className="flex justify-between items-center p-2 bg-[#161925] rounded-lg">
-                    <span className="text-slate-300">{item.description} ({item.category})</span>
-                    <span className="font-mono text-white">GHS {item.amount}</span>
+                  <div key={item.id} className="flex justify-between items-center p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+                    <span className="text-slate-700 dark:text-slate-300">{item.description} ({item.category})</span>
+                    <span className="font-mono text-slate-900 dark:text-white font-semibold">GHS {item.amount}</span>
                   </div>
                 ))}
               </div>
@@ -320,10 +315,10 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
 
       {/* Payments Log Tab */}
       {activeTab === 'PAYMENTS' && (
-        <div className="bg-[#0f111a] rounded-2xl border border-slate-800 shadow-xl overflow-hidden p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden p-4">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#121420] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-100 dark:border-slate-800">
                 <th className="p-3">Receipt No</th>
                 <th className="p-3">Student Name</th>
                 <th className="p-3">Date</th>
@@ -333,25 +328,27 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
                 <th className="p-3 text-center">Receipt PDF</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {payments.map(pay => (
-                <tr key={pay.id} className="hover:bg-[#141724]">
-                  <td className="p-3 font-mono font-bold text-blue-400">{pay.receiptNo}</td>
-                  <td className="p-3 font-semibold text-white">{pay.studentName}</td>
-                  <td className="p-3 text-slate-400">{pay.paymentDate}</td>
-                  <td className="p-3"><span className="px-2 py-0.5 bg-slate-800 rounded font-semibold text-[10px]">{pay.paymentMethod}</span></td>
-                  <td className="p-3 font-mono text-slate-400">{pay.referenceNo}</td>
-                  <td className="p-3 text-right font-mono text-emerald-400 font-bold">GHS {pay.amountPaid.toLocaleString()}</td>
+                <tr key={pay.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{pay.receiptNo}</td>
+                  <td className="p-3 font-semibold text-slate-900 dark:text-white">{pay.studentName}</td>
+                  <td className="p-3 text-slate-500 dark:text-slate-400">{pay.paymentDate}</td>
+                  <td className="p-3"><Badge variant="default">{pay.paymentMethod}</Badge></td>
+                  <td className="p-3 font-mono text-slate-500 dark:text-slate-400">{pay.referenceNo}</td>
+                  <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">GHS {pay.amountPaid.toLocaleString()}</td>
                   <td className="p-3 text-center">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         setCurrentReceipt(pay);
                         setShowReceiptModal(true);
                       }}
-                      className="px-2.5 py-1 bg-[#161925] hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-semibold flex items-center gap-1 mx-auto cursor-pointer"
+                      leftIcon={<Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
                     >
-                      <Printer className="w-3 h-3 text-blue-400" /> Print
-                    </button>
+                      Print
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -362,77 +359,79 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
 
       {/* Record Payment Modal */}
       {showPayModal && selectedInvoice && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0f111a] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 text-slate-200">
-            <h3 className="text-base font-semibold text-white serif italic">Record Fee Payment</h3>
-
-            <div className="p-3 bg-[#161925] rounded-xl border border-slate-800 text-xs space-y-1">
-              <span className="font-semibold text-white block">{selectedInvoice.studentName} ({selectedInvoice.admissionNo})</span>
-              <span className="text-slate-400 block">{selectedInvoice.className} • Outstanding Arrears: <strong className="text-rose-400">GHS {selectedInvoice.outstandingBalance}</strong></span>
+        <Modal
+          isOpen={showPayModal}
+          onClose={() => setShowPayModal(false)}
+          title="Record Fee Payment"
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <span className="font-semibold text-slate-900 dark:text-white block">{selectedInvoice.studentName} ({selectedInvoice.admissionNo})</span>
+              <span className="text-slate-500 dark:text-slate-400 block">{selectedInvoice.className} • Outstanding Arrears: <strong className="text-rose-600 dark:text-rose-400">GHS {selectedInvoice.outstandingBalance}</strong></span>
             </div>
 
             <form onSubmit={handleRecordPayment} className="space-y-3 text-xs">
               <div>
-                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Payment Amount (GHS)</label>
-                <input
+                <Input
+                  label="Payment Amount (GHS)"
                   type="number"
                   required
                   max={selectedInvoice.outstandingBalance}
                   value={payAmount}
                   onChange={e => setPayAmount(Number(e.target.value))}
-                  className="w-full bg-[#161925] border border-slate-700 text-white rounded-xl p-2.5 font-mono outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Payment Method</label>
-                <select
+                <Select
+                  label="Payment Method"
                   value={payMethod}
                   onChange={e => setPayMethod(e.target.value as any)}
-                  className="w-full bg-[#161925] border border-slate-700 text-white rounded-xl p-2.5 outline-none focus:border-blue-500"
-                >
-                  <option value="CASH">Cash Payment</option>
-                  <option value="MOBILE_MONEY">Mobile Money (MoMo)</option>
-                  <option value="BANK_TRANSFER">Bank Deposit / Direct Transfer</option>
-                  <option value="CHEQUE">Cheque</option>
-                </select>
+                  options={[
+                    { value: 'CASH', label: 'Cash Payment' },
+                    { value: 'MOBILE_MONEY', label: 'Mobile Money (MoMo)' },
+                    { value: 'BANK_TRANSFER', label: 'Bank Deposit / Direct Transfer' },
+                    { value: 'CHEQUE', label: 'Cheque' },
+                  ]}
+                />
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Transaction Ref / Slip No.</label>
-                <input
+                <Input
+                  label="Transaction Ref / Slip No."
                   type="text"
                   value={payRef}
                   onChange={e => setPayRef(e.target.value)}
                   placeholder="e.g. MOMO-982341 / CHQ-0012"
-                  className="w-full bg-[#161925] border border-slate-700 text-white rounded-xl p-2.5 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowPayModal(false)}
-                  className="px-4 py-2 bg-[#161925] text-slate-300 font-semibold rounded-xl"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl"
+                  variant="primary"
+                  size="sm"
                 >
                   Confirm & Issue Receipt
-                </button>
+                </Button>
               </div>
             </form>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Printable Receipt Modal */}
       {showReceiptModal && currentReceipt && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 rounded-2xl w-full max-w-md p-6 space-y-4 print:p-0">
+          <div className="bg-white text-slate-900 rounded-2xl w-full max-w-md p-6 space-y-4 print:p-0 shadow-2xl">
             <div className="text-center border-b pb-4">
               <h2 className="text-lg font-bold uppercase tracking-wide">OFFICIAL SCHOOL FEE RECEIPT</h2>
               <p className="text-xs text-slate-500">Receipt No: {currentReceipt.receiptNo}</p>
@@ -466,18 +465,21 @@ export const FeesManagementView: React.FC<Props> = ({ schoolId }) => {
             </div>
 
             <div className="flex justify-end gap-2 pt-2 print:hidden">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShowReceiptModal(false)}
-                className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs"
               >
                 Close
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5"
+                leftIcon={<Printer className="w-4 h-4" />}
               >
-                <Printer className="w-4 h-4" /> Print / Save PDF
-              </button>
+                Print / Save PDF
+              </Button>
             </div>
           </div>
         </div>

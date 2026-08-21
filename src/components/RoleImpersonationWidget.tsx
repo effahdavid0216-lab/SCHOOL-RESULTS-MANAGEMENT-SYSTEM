@@ -69,15 +69,6 @@ const ROLE_CONFIGS: RoleConfig[] = [
     defaultEmailSuffix: 'STU-2026-001',
     icon: GraduationCap,
     accentColor: 'from-purple-600 to-pink-600'
-  },
-  {
-    role: 'PARENT',
-    title: 'Parent / Guardian',
-    badge: 'Parent Portal',
-    description: 'Track children academic progress, fee balances, fee receipts, and terminal report downloads.',
-    defaultEmailSuffix: 'parent@edu.gh',
-    icon: Users,
-    accentColor: 'from-amber-600 to-orange-600'
   }
 ];
 

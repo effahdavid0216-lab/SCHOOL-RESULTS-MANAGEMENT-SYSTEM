@@ -157,6 +157,22 @@ export function determineGradeAndRemark(
 }
 
 /**
+ * Calculates final grade and remarks directly for convenience.
+ */
+export function calculateFinalGradeAndRemarks(
+  score: number,
+  gradingSystem?: GradingSystem | null
+): { grade: string; remarks: string; gradePoint: number; isPass: boolean } {
+  const res = determineGradeAndRemark(score, gradingSystem);
+  return {
+    grade: res.grade,
+    remarks: res.remark,
+    gradePoint: res.gradePoint,
+    isPass: res.isPass
+  };
+}
+
+/**
  * Complete single authoritative calculation engine for any score entry.
  * Handles SBA + Exam and Mock Exam.
  */

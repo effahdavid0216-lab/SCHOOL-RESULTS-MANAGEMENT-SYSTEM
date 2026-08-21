@@ -19,10 +19,17 @@ import {
   ChevronRight,
   TrendingUp,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 import { Teacher, Student, SubjectItem, ClassItem } from '../types';
-import { getTeachersBySchool, getStudentsBySchool, getSubjectsBySchool, getClassesBySchool } from '../lib/services';
+import {
+  getTeachersBySchool,
+  getStudentsBySchool,
+  getSubjectsBySchool,
+  getClassesBySchool
+} from '../lib/services';
 import { TeacherScoreEntryView } from './TeacherScoreEntryView';
 import { StudentReportCardView } from './StudentReportCardView';
 import { ClassBroadsheetView } from './ClassBroadsheetView';
@@ -34,6 +41,8 @@ import { TeacherProfileSettingsView } from './TeacherProfileSettingsView';
 import { TeacherStudentsView } from './TeacherStudentsView';
 import { TeacherClassesView } from './TeacherClassesView';
 import { TeacherSubjectsView } from './TeacherSubjectsView';
+import { TermAttendanceSummaryView } from './TermAttendanceSummaryView';
+import { Button, StatCard, Badge, PageHeader, Modal } from './ui';
 
 interface Props {
   schoolId: string;
@@ -50,6 +59,7 @@ type NavTab =
   | 'REPORT_CARDS'
   | 'SETTINGS'
   | 'ATTENDANCE'
+  | 'TERM_ATTENDANCE'
   | 'ASSIGNMENTS'
   | 'TIMETABLE'
   | 'BROADSHEET'
@@ -78,7 +88,7 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
       getClassesBySchool(schoolId)
     ]);
 
-    const found = tList.find(t => t.email.toLowerCase() === email.toLowerCase()) || tList[0];
+    const found = tList.find((t) => t.email.toLowerCase() === email.toLowerCase()) || tList[0];
     setTeacher(found || null);
     setStudents(stList);
     setSubjects(subList);
@@ -100,7 +110,7 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
     { id: 'SUBJECTS', label: 'Subjects', icon: BookOpen, badge: subjects.length },
     { id: 'SCORE_ENTRY', label: 'Score Entry', icon: CheckSquare },
     { id: 'REPORT_CARDS', label: 'Published Report Cards', icon: Award },
-    { id: 'SETTINGS', label: 'Settings', icon: Settings },
+    { id: 'SETTINGS', label: 'Settings', icon: Settings }
   ];
 
   interface SecondaryNavItem {
@@ -111,10 +121,11 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
 
   const secondaryNavItems: SecondaryNavItem[] = [
     { id: 'BROADSHEET', label: 'Broadsheet', icon: FileSpreadsheet },
-    { id: 'ATTENDANCE', label: 'Roll Call', icon: UserCheck },
+    { id: 'ATTENDANCE', label: 'Daily Roll Call', icon: UserCheck },
+    { id: 'TERM_ATTENDANCE', label: 'Term Attendance Summary', icon: CheckSquare },
     { id: 'ASSIGNMENTS', label: 'Assignments', icon: BookOpen },
     { id: 'TIMETABLE', label: 'Timetable', icon: Clock },
-    { id: 'ANALYTICS', label: 'Analytics', icon: BarChart2 },
+    { id: 'ANALYTICS', label: 'Analytics', icon: BarChart2 }
   ];
 
   const handleNavSelect = (tab: NavTab) => {
@@ -122,90 +133,68 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
     setIsMobileNavOpen(false);
   };
 
-  return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-200 font-sans flex flex-col md:flex-row">
-      {/* Mobile Top Header */}
-      <header className="md:hidden bg-[#0f111a] border-b border-slate-800 px-4 h-16 flex items-center justify-between sticky top-0 z-40 print:hidden">
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-            className="p-2 bg-[#161925] border border-slate-700 text-slate-300 rounded-xl cursor-pointer"
-            aria-label="Toggle navigation menu"
-          >
-            {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <div>
-            <span className="font-bold text-sm text-white block leading-tight">Teacher Portal</span>
-            <span className="text-[10px] text-blue-400 font-semibold truncate max-w-[160px] block">
-              {teacher?.fullName || email}
-            </span>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Loading Teacher Portal...
+          </p>
         </div>
+      </div>
+    );
+  }
 
-        <button
-          type="button"
-          onClick={() => setShowLogoutConfirm(true)}
-          className="p-2 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
-      </header>
-
-      {/* Backdrop for mobile drawer */}
-      {isMobileNavOpen && (
-        <div
-          onClick={() => setIsMobileNavOpen(false)}
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 md:hidden print:hidden"
-        />
-      )}
-
-      {/* Left-Side Vertical Navigation Panel */}
-      <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-72 bg-[#0f111a] border-r border-slate-800 z-50 flex flex-col justify-between transition-transform duration-200 ease-in-out print:hidden ${
-          isMobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
-      >
-        {/* Brand & User Profile Header */}
-        <div className="p-5 border-b border-slate-800/80">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/30">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="font-bold text-white text-base leading-none">EduTrack Pro</h1>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Teacher Portal</span>
-              </div>
-            </div>
-
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+      {/* Top Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setIsMobileNavOpen(false)}
-              className="md:hidden text-slate-400 hover:text-white p-1"
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+              className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              aria-label="Toggle navigation menu"
             >
-              <X className="w-5 h-5" />
+              {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+
+            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-sm">
+              <SchoolIcon className="w-5 h-5" />
+            </div>
+
+            <div>
+              <h1 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+                {teacher?.fullName || 'Educator Portal'}
+              </h1>
+              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">
+                Staff ID: {teacher?.staffId || 'TCH-001'} • School ID: {schoolId}
+              </p>
+            </div>
           </div>
 
-          {/* Teacher Profile Card */}
-          <div className="bg-[#161925] border border-slate-800 rounded-2xl p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-sm shrink-0">
-              {teacher?.fullName ? teacher.fullName.slice(0, 2).toUpperCase() : 'TC'}
-            </div>
-            <div className="overflow-hidden flex-1">
-              <p className="font-bold text-white text-xs truncate">{teacher?.fullName || 'Educator'}</p>
-              <p className="text-[10px] text-slate-400 font-mono truncate">{teacher?.staffId || email}</p>
-            </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<LogOut className="w-3.5 h-3.5" />}
+              onClick={() => setShowLogoutConfirm(true)}
+            >
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
           </div>
         </div>
+      </header>
 
-        {/* Scrollable Navigation Menu */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          {/* Primary Navigation Section */}
+      {/* Main Layout Body */}
+      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+        {/* Sidebar Desktop */}
+        <aside className="hidden lg:flex flex-col w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-6 shrink-0">
           <div className="space-y-1">
-            <span className="px-3 text-[10px] font-bold uppercase text-slate-500 tracking-wider block mb-2">
-              Main Menu
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 block mb-1">
+              Core Modules
             </span>
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
@@ -214,21 +203,25 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => handleNavSelect(item.id as NavTab)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  onClick={() => handleNavSelect(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                      : 'text-slate-300 hover:bg-[#161925] hover:text-white'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4" />
                     <span>{item.label}</span>
                   </div>
                   {item.badge !== undefined && (
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono font-bold ${
-                      isActive ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -237,10 +230,9 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
             })}
           </div>
 
-          {/* Academic Utilities Section */}
-          <div className="space-y-1 pt-2 border-t border-slate-800/80">
-            <span className="px-3 text-[10px] font-bold uppercase text-slate-500 tracking-wider block mb-2">
-              Academic Tools
+          <div className="space-y-1 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 block mb-1">
+              Tools & Analytics
             </span>
             {secondaryNavItems.map((item) => {
               const Icon = item.icon;
@@ -249,288 +241,165 @@ export const TeacherDashboard: React.FC<Props> = ({ schoolId, email, onLogout })
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => handleNavSelect(item.id as NavTab)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                  onClick={() => handleNavSelect(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-slate-800 text-white font-bold border border-slate-700'
-                      : 'text-slate-400 hover:bg-[#161925] hover:text-slate-200'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4" />
                     <span>{item.label}</span>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-slate-600" />
+                  <ChevronRight className="w-3 h-3 text-slate-400" />
                 </button>
               );
             })}
           </div>
-        </div>
+        </aside>
 
-        {/* Bottom Interactive Logout Action */}
-        <div className="p-4 border-t border-slate-800/80 bg-[#0c0e15]">
-          <button
-            type="button"
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-full py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Logout Account</span>
-          </button>
-        </div>
-      </aside>
+        {/* Content View */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15 }}
+            >
+              {activeTab === 'DASHBOARD' && (
+                <div className="space-y-6">
+                  {/* Welcome Card */}
+                  <div className="bg-gradient-to-r from-indigo-900/40 via-indigo-950/20 to-transparent bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <Badge variant="active" label="Staff Dashboard" icon={<Sparkles className="w-3 h-3" />} />
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        Welcome back, {teacher?.fullName || 'Educator'}
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Staff ID: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{teacher?.staffId || 'TCH-001'}</span> • Qualification: {teacher?.qualification || 'B.Ed'}
+                      </p>
+                    </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="space-y-6"
-          >
-            {/* 1. Dashboard Overview */}
-            {activeTab === 'DASHBOARD' && (
-              <div className="space-y-6">
-                {/* Welcome Card */}
-                <div className="bg-gradient-to-r from-blue-900/30 via-[#0f111a] to-[#0f111a] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <span className="px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase rounded-full tracking-wider">
-                      STAFF DASHBOARD OVERVIEW
-                    </span>
-                    <h2 className="text-2xl font-bold text-white tracking-tight">
-                      Welcome back, {teacher?.fullName || 'Educator'}
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      Staff ID: <span className="font-mono text-slate-300">{teacher?.staffId || 'TCH-001'}</span> • Qualification: {teacher?.qualification || 'Bachelor of Education'}
-                    </p>
+                    <div className="flex items-center gap-2.5">
+                      <Button
+                        variant="primary"
+                        size="md"
+                        leftIcon={<CheckSquare className="w-4 h-4" />}
+                        onClick={() => setActiveTab('SCORE_ENTRY')}
+                      >
+                        Score Entry
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="md"
+                        leftIcon={<Award className="w-4 h-4" />}
+                        onClick={() => setActiveTab('REPORT_CARDS')}
+                      >
+                        Report Cards
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('SCORE_ENTRY')}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <CheckSquare className="w-3.5 h-3.5" /> Score Entry
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('REPORT_CARDS')}
-                      className="px-4 py-2 bg-[#161925] hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Award className="w-3.5 h-3.5 text-blue-400" /> Report Cards
-                    </button>
+                  {/* 4 Stat Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                      title="Enrolled Students"
+                      value={students.length}
+                      icon={<Users className="w-6 h-6" />}
+                      description="Active school roster"
+                      colorScheme="indigo"
+                    />
+                    <StatCard
+                      title="Assigned Classes"
+                      value={classes.length}
+                      icon={<GraduationCap className="w-6 h-6" />}
+                      description="Grade levels & streams"
+                      colorScheme="emerald"
+                    />
+                    <StatCard
+                      title="Curriculum Subjects"
+                      value={subjects.length}
+                      icon={<BookOpen className="w-6 h-6" />}
+                      description="Assigned syllabus items"
+                      colorScheme="purple"
+                    />
+                    <StatCard
+                      title="Weekly Workload"
+                      value={`${teacher?.periodsCount || 18} Periods`}
+                      icon={<Clock className="w-6 h-6" />}
+                      description="Scheduled timetable slots"
+                      colorScheme="amber"
+                    />
                   </div>
+
+                  {/* Student Performance Analytics */}
+                  <StudentPerformanceAnalytics schoolId={schoolId} teacherEmail={email} />
                 </div>
+              )}
 
-                {/* Metric Summary Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-[#0f111a] p-4 rounded-2xl border border-slate-800 shadow-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Enrolled Students</span>
-                      <Users className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white font-mono">{students.length}</p>
-                    <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-1">
-                      <TrendingUp className="w-3 h-3" /> Active School Roster
-                    </span>
-                  </div>
-
-                  <div className="bg-[#0f111a] p-4 rounded-2xl border border-slate-800 shadow-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">School Classes</span>
-                      <GraduationCap className="w-4 h-4 text-indigo-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white font-mono">{classes.length}</p>
-                    <span className="text-[10px] text-slate-400 mt-1 block">Assigned Classrooms</span>
-                  </div>
-
-                  <div className="bg-[#0f111a] p-4 rounded-2xl border border-slate-800 shadow-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Curriculum Subjects</span>
-                      <BookOpen className="w-4 h-4 text-purple-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white font-mono">{subjects.length}</p>
-                    <span className="text-[10px] text-slate-400 mt-1 block">Active Subjects</span>
-                  </div>
-
-                  <div className="bg-[#0f111a] p-4 rounded-2xl border border-slate-800 shadow-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Weekly Workload</span>
-                      <Clock className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white font-mono">{teacher?.periodsCount || 18}</p>
-                    <span className="text-[10px] text-amber-400 mt-1 block">Periods / Week</span>
-                  </div>
-                </div>
-
-                {/* Performance Analytics Embedded Preview */}
+              {activeTab === 'STUDENTS' && <TeacherStudentsView schoolId={schoolId} />}
+              {activeTab === 'CLASSES' && <TeacherClassesView schoolId={schoolId} />}
+              {activeTab === 'SUBJECTS' && <TeacherSubjectsView schoolId={schoolId} />}
+              {activeTab === 'SCORE_ENTRY' && (
+                <TeacherScoreEntryView
+                  schoolId={schoolId}
+                  teacherEmail={email}
+                  classes={classes}
+                  subjects={subjects}
+                />
+              )}
+              {activeTab === 'REPORT_CARDS' && (
+                <StudentReportCardView
+                  schoolId={schoolId}
+                  studentId={students[0]?.id || ''}
+                  classes={classes}
+                />
+              )}
+              {activeTab === 'BROADSHEET' && <ClassBroadsheetView schoolId={schoolId} />}
+              {activeTab === 'ATTENDANCE' && <AttendanceManagementView schoolId={schoolId} />}
+              {activeTab === 'TERM_ATTENDANCE' && <TermAttendanceSummaryView schoolId={schoolId} />}
+              {activeTab === 'ASSIGNMENTS' && <AssignmentManagementView schoolId={schoolId} />}
+              {activeTab === 'TIMETABLE' && <TimetableManagementView schoolId={schoolId} />}
+              {activeTab === 'ANALYTICS' && (
                 <StudentPerformanceAnalytics schoolId={schoolId} teacherEmail={email} />
-
-                {/* Quick Lists: Recent Classes & Assigned Subjects */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-[#0f111a] p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4 text-blue-400" /> Classes
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('CLASSES')}
-                        className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer"
-                      >
-                        View All ({classes.length})
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {classes.slice(0, 4).map((c) => {
-                        const count = students.filter(s => s.classId === c.id).length;
-                        return (
-                          <div
-                            key={c.id}
-                            onClick={() => setActiveTab('CLASSES')}
-                            className="p-3 bg-[#161925] hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-between text-xs cursor-pointer transition-colors"
-                          >
-                            <div>
-                              <p className="font-bold text-white">{c.className}</p>
-                              <p className="text-[10px] text-slate-400">Class Master: {c.classTeacherName || 'Assigned'}</p>
-                            </div>
-                            <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full font-mono text-[10px] font-bold">
-                              {count} Students
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="bg-[#0f111a] p-5 rounded-2xl border border-slate-800 shadow-xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-blue-400" /> Teaching Subjects
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('SUBJECTS')}
-                        className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer"
-                      >
-                        View All ({subjects.length})
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {subjects.slice(0, 4).map((s) => (
-                        <div
-                          key={s.id}
-                          onClick={() => setActiveTab('SUBJECTS')}
-                          className="p-3 bg-[#161925] hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-between text-xs cursor-pointer transition-colors"
-                        >
-                          <div>
-                            <p className="font-bold text-white">{s.subjectName}</p>
-                            <p className="text-[10px] text-slate-400 font-mono">Code: {s.subjectCode || 'GEN'}</p>
-                          </div>
-                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded-full font-mono text-[10px] font-bold">
-                            {s.subjectType || 'CORE'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 2. Students View */}
-            {activeTab === 'STUDENTS' && (
-              <TeacherStudentsView schoolId={schoolId} />
-            )}
-
-            {/* 3. Classes View */}
-            {activeTab === 'CLASSES' && (
-              <TeacherClassesView schoolId={schoolId} />
-            )}
-
-            {/* 4. Subjects View */}
-            {activeTab === 'SUBJECTS' && (
-              <TeacherSubjectsView schoolId={schoolId} />
-            )}
-
-            {/* 5. Score Entry View */}
-            {activeTab === 'SCORE_ENTRY' && (
-              <TeacherScoreEntryView schoolId={schoolId} teacherEmail={email} isSchoolAdmin={false} />
-            )}
-
-            {/* 6. Published Report Cards View */}
-            {activeTab === 'REPORT_CARDS' && (
-              <StudentReportCardView schoolId={schoolId} isStudentPortal={false} />
-            )}
-
-            {/* 7. Settings View */}
-            {activeTab === 'SETTINGS' && (
-              <TeacherProfileSettingsView schoolId={schoolId} teacherEmail={email} />
-            )}
-
-            {/* Secondary Utilities */}
-            {activeTab === 'BROADSHEET' && (
-              <ClassBroadsheetView schoolId={schoolId} />
-            )}
-
-            {activeTab === 'ATTENDANCE' && (
-              <AttendanceManagementView schoolId={schoolId} />
-            )}
-
-            {activeTab === 'ASSIGNMENTS' && (
-              <AssignmentManagementView schoolId={schoolId} isTeacher={true} />
-            )}
-
-            {activeTab === 'TIMETABLE' && (
-              <TimetableManagementView schoolId={schoolId} />
-            )}
-
-            {activeTab === 'ANALYTICS' && (
-              <StudentPerformanceAnalytics schoolId={schoolId} teacherEmail={email} />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+              )}
+              {activeTab === 'SETTINGS' && (
+                <TeacherProfileSettingsView
+                  schoolId={schoolId}
+                  teacherEmail={email}
+                  onProfileUpdated={loadTeacherData}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0f111a] border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl animate-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
-              <LogOut className="w-6 h-6" />
-            </div>
-            <div className="text-center space-y-1">
-              <h3 className="font-bold text-white text-base">Sign Out of Teacher Portal?</h3>
-              <p className="text-xs text-slate-400">
-                You will need to re-authenticate with your staff email to access score entries and student records.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-                className="py-2 px-3 bg-[#161925] hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  onLogout();
-                }}
-                className="py-2 px-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-rose-600/20"
-              >
-                Confirm Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        title="Confirm Logout"
+        description="Are you sure you want to end your teacher session?"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setShowLogoutConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={onLogout}>
+              Logout
+            </Button>
+          </>
+        }
+      >
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Unsaved changes will be safely discarded. You can log back in at any time with your credentials.
+        </p>
+      </Modal>
     </div>
   );
 };
